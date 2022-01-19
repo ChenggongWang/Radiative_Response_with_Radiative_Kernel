@@ -6,7 +6,7 @@ Then we can compute the climate feedbacks:
 
 <img src="https://render.githubusercontent.com/render/math?math=\lambda_i = dR_i/dT">
 
-[Numba](https://numba.pydata.org/) is used to accelerate the computation.
+[Numba](https://numba.pydata.org/) is used to parallel and accelerate the computation. 
 
 
 ## r3k_env.yml

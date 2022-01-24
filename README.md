@@ -4,7 +4,7 @@ Use the radiative kernel ([Soden et al. 2008](https://doi.org/10.1175/2007JCLI21
 
 Then we can compute the climate feedbacks: 
 
-<img src="https://render.githubusercontent.com/render/math?math=\color{grey}\lambda_i = dR_i/dT$">
+<img src="https://render.githubusercontent.com/render/math?math=\color{grey50}\lambda_i = dR_i/dT$">
 
 The example code show how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is availabel at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file. The regridded data is avaliable [here](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing).
 

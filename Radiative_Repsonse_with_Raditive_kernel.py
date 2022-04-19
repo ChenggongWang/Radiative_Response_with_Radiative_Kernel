@@ -3,6 +3,148 @@ from numba import njit
 import numpy as np
 import xarray as xr
 
+def global_mean_xarray(ds_XXLL):
+    """ 
+    Compute the global mean value of the data.
+    The data has to have the lat and lon in its dimensions.
+    Should not include NaN in Inputs.
+    
+    Parameters
+    ----------
+    ds_XXLL   : xarray with lat and lon. ds_XXLL.lat will be 
+                used for area weight.
+
+    Returns
+    ----------
+    tmp_XX    : xarray without lat and lon.
+    
+    """
+    lat = ds_XXLL.coords['lat']        # readin lat
+    # global mean
+    # compute cos(lat) as a weight function
+    weight_lat = np.cos(np.deg2rad(lat))/np.mean(np.cos(np.deg2rad(lat)))
+    tmp_XXL = ds_XXLL.mean(dim=['lon'])*weight_lat
+    tmp_XX  = tmp_XXL.mean(dim=['lat'])
+    return tmp_XX
+
+def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
+     
+    ta_anom = diff_pert_mon_cont_12mon_TPLL_fast(var_pert['ta'].values,var_cont['ta'].values)
+    omega_wv = omega_wv_fast(var_pert['hus'].values,\
+                             var_cont['hus'].values,\
+                             var_cont['ta'].values)
+    ts_anom = diff_pert_mon_cont_12mon_TLL_fast(var_pert['ts'].values, \
+                                                var_cont['ts'].values)
+    ta_anom_lr = ta_anom - np.broadcast_to(ts_anom[:,np.newaxis,:,:],ta_anom.shape)
+    alb_anom_100 = alb_diff_pert_mon_cont_12mon_TLL_fast(var_pert['rsus'].values, \
+                                                         var_pert['rsds'].values, \
+                                                         var_cont['rsus'].values, \
+                                                         var_cont['rsds'].values)
+    dR_sw   = diff_pert_mon_cont_12mon_TLL_fast((var_pert['rsdt'].values-var_pert['rsut'].values),\
+                                                (var_cont['rsdt'].values-var_cont['rsut'].values) )
+    dR_lw   = diff_pert_mon_cont_12mon_TLL_fast((-var_pert['rlut'].values),\
+                                                (-var_cont['rlut'].values) )
+    dRcs_sw = diff_pert_mon_cont_12mon_TLL_fast((var_pert['rsdt'].values-var_pert['rsutcs'].values),\
+                                                (var_cont['rsdt'].values-var_cont['rsutcs'].values) )
+    dRcs_lw = diff_pert_mon_cont_12mon_TLL_fast((-var_pert['rlutcs'].values),\
+                                                (-var_cont['rlutcs'].values) )
+    plev_weight = RK_plev_weight(f_RK.plev.values)
+    
+    dR_wv_lw    = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.lw_q.values     , plev_weight)
+    dR_wv_sw    = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.sw_q.values     , plev_weight)
+    dR_wvcs_lw  = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.lwclr_q.values  , plev_weight)
+    dR_wvcs_sw  = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.swclr_q.values  , plev_weight)
+    
+    dR_Ta       = RK_compute_TPLL_plev_fast2(ta_anom     ,f_RK.lw_ta.values    , plev_weight)
+    dR_Tacs     = RK_compute_TPLL_plev_fast2(ta_anom     ,f_RK.lwclr_ta.values , plev_weight)
+    
+    dR_LR       = RK_compute_TPLL_plev_fast2(ta_anom_lr  ,f_RK.lw_ta.values    , plev_weight)
+    dR_LRcs     = RK_compute_TPLL_plev_fast2(ta_anom_lr  ,f_RK.lwclr_ta.values , plev_weight)
+    
+    dR_Ts       = RK_compute_TLL_fast       (ts_anom     ,f_RK.lw_ts.values     )
+    dR_Tscs     = RK_compute_TLL_fast       (ts_anom     ,f_RK.lwclr_ts.values  )
+    dR_alb      = RK_compute_TLL_fast       (alb_anom_100,f_RK.sw_alb.values    )
+    dR_albcs    = RK_compute_TLL_fast       (alb_anom_100,f_RK.swclr_alb.values )
+
+    ## dR due to cloud change
+    Dcs_lw   = dRcs_lw - dR_Tacs - dR_Tscs - dR_wvcs_lw
+    Dcs_sw   = dRcs_sw - dR_albcs - dR_wvcs_sw
+    D_lw     = Dcs_lw / 1.16
+    D_sw     = Dcs_sw / 1.16
+    dR_c_lw  = dR_lw - D_lw - dR_Ta - dR_Ts - dR_wv_lw
+    dR_c_sw  = dR_sw - D_sw - dR_alb - dR_wv_sw
+    
+    ## write to file
+    ds_write = xr.Dataset()
+    
+    ds_write.coords['time'] = (('time'),var_pert['ts'].coords['time'].values)
+    ds_write.coords['lat']  = (('lat'),var_pert['ts'].coords['lat'].values)
+    ds_write.coords['lon']  = (('lon'),var_pert['ts'].coords['lon'].values)
+    
+    ds_write['dR_wv_lw']   = (('time','lat','lon'),dR_wv_lw)
+    ds_write['dR_wv_sw']   = (('time','lat','lon'),dR_wv_sw)
+    ds_write['dR_wvcs_lw'] = (('time','lat','lon'),dR_wvcs_lw)
+    ds_write['dR_wvcs_sw'] = (('time','lat','lon'),dR_wvcs_sw)
+    ds_write['dR_Ta']      = (('time','lat','lon'),dR_Ta)
+    ds_write['dR_Tacs']    = (('time','lat','lon'),dR_Tacs)
+    ds_write['dR_LR']      = (('time','lat','lon'),dR_LR)
+    ds_write['dR_LRcs']    = (('time','lat','lon'),dR_LRcs)
+    ds_write['dR_Ts']      = (('time','lat','lon'),dR_Ts)
+    ds_write['dR_Tscs']    = (('time','lat','lon'),dR_Tscs)
+    ds_write['dR_alb']     = (('time','lat','lon'),dR_alb)
+    ds_write['dR_albcs']   = (('time','lat','lon'),dR_albcs)
+    ds_write['dR_c_lw']    = (('time','lat','lon'),dR_c_lw)
+    ds_write['dR_c_sw']    = (('time','lat','lon'),dR_c_sw)
+    ds_write['Dcs_lw']     = (('time','lat','lon'),Dcs_lw)
+    ds_write['Dcs_sw']     = (('time','lat','lon'),Dcs_sw)
+    ds_write['dR_sw']      = (('time','lat','lon'),dR_sw)
+    ds_write['dR_lw']      = (('time','lat','lon'),dR_lw)
+    ds_write['dRcs_sw']    = (('time','lat','lon'),dRcs_sw)
+    ds_write['dRcs_lw']    = (('time','lat','lon'),dRcs_lw)
+    ds_write['ts']         = (('time','lat','lon'),var_pert['ts'].values)
+    ds_write['dts']        = (('time','lat','lon'),ts_anom)
+    
+    ds_write['dR_wv_lw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_lw  ))
+    ds_write['dR_wv_sw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_sw  ))
+    ds_write['dR_wvcs_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_lw))
+    ds_write['dR_wvcs_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_sw))
+    ds_write['dR_Ta_gm']      = (('time'),global_mean_xarray(ds_write.dR_Ta     ))
+    ds_write['dR_Tacs_gm']    = (('time'),global_mean_xarray(ds_write.dR_Tacs   ))
+    ds_write['dR_LR_gm']      = (('time'),global_mean_xarray(ds_write.dR_LR     ))
+    ds_write['dR_LRcs_gm']    = (('time'),global_mean_xarray(ds_write.dR_LRcs   ))
+    ds_write['dR_Ts_gm']      = (('time'),global_mean_xarray(ds_write.dR_Ts     ))
+    ds_write['dR_Tscs_gm']    = (('time'),global_mean_xarray(ds_write.dR_Tscs   ))
+    ds_write['dR_alb_gm']     = (('time'),global_mean_xarray(ds_write.dR_alb    ))
+    ds_write['dR_albcs_gm']   = (('time'),global_mean_xarray(ds_write.dR_albcs  ))
+    ds_write['dR_c_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_c_lw   ))
+    ds_write['dR_c_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_c_sw   ))
+    ds_write['Dcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_lw    ))
+    ds_write['Dcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_sw    ))
+    ds_write['dR_sw_gm']      = (('time'),global_mean_xarray(ds_write.dR_sw     ))
+    ds_write['dR_lw_gm']      = (('time'),global_mean_xarray(ds_write.dR_lw     ))
+    ds_write['dRcs_sw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_sw   ))
+    ds_write['dRcs_lw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_lw   ))
+    ds_write['ts_gm']         = (('time'),global_mean_xarray(ds_write.ts        ))
+    ds_write['dts_gm']        = (('time'),global_mean_xarray(ds_write.dts       ))
+    return ds_write
+
+def compile_njit_functions():
+    print("@njit Functions compiling ...", end='')
+    # run with dummy data to compile the jit functions and speed up the computation
+    # see https://numba.pydata.org/numba-doc/latest/index.html for detail
+    dummy_TPLL = np.random.rand(36,2,3,4).astype('float32')
+    dummy_TPLL12 = np.random.rand(12,2,3,4).astype('float32')
+    dummy_TLL = np.random.rand(36,3,4).astype('float32')
+    dummy_TLL12 = np.random.rand(12,3,4).astype('float32')
+    dummy_plev = np.random.rand(2).astype('float32')
+    diff_pert_mon_cont_12mon_TPLL_fast(dummy_TPLL, dummy_TPLL12)
+    diff_pert_mon_cont_12mon_TLL_fast(dummy_TLL, dummy_TLL12)
+    alb_diff_pert_mon_cont_12mon_TLL_fast(dummy_TLL, dummy_TLL, dummy_TLL12, dummy_TLL12)
+    omega_wv_fast(dummy_TPLL, dummy_TPLL12, dummy_TPLL12)
+    RK_compute_TLL_fast (dummy_TLL, dummy_TLL12)
+    RK_compute_TPLL_plev_fast(dummy_TPLL, dummy_TPLL12, dummy_plev)
+    print("  | finished!")
+
 def time_sanity_check(time_v, info):
     month_serise = time_v['time.year']*12+time_v['time.month']
     month_serise = month_serise.values
@@ -66,6 +208,7 @@ def diff_pert_mon_cont_12mon_TPLL_fast(pert_TPLL,cont_TPLL):
 # def omega_wv_fast2(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
 #     """
 #     Convert humidity to omega (the variable used by water vapor kernel)
+#     Approximation to function: omega_wv_fast.
 #     For 3D variable [Time, Plev, Lat, Lon] (TPLL)
 #     ALL inputs have to be numpy array
 #     """
@@ -128,13 +271,14 @@ def RK_compute_TPLL_plev_fast(var_mon, rk_mon_cli, plev_weight):
 #     plev_weight = [0.425, 0.75 , 1.125, 1.25 , 1., 1. , 1.,
 #                    0.75 , 0.5  ,0.5  , 0.5  , 0.4  , 0.25 ,
 #                    0.2  , 0.15 , 0.1  , 0.075, 0.045,0.005]
-    
-    dR_TLL = np.zeros_like(var_mon[:,0,:,:],dtype = np.float32)
+
+    dR_TLL = np.zeros_like(var_mon[:,0,:,:],dtype = np.float32)  
     for mon in numba.prange(rk_mon_cli.shape[0]):
         for i in numba.prange(var_mon.shape[0]/12):
             for pi in range(var_mon.shape[1]):
                 for li in range(var_mon.shape[2]):
                     for lj in range(var_mon.shape[3]):
+                        # skip NaN values (empty location due to topography)
                         if np.isnan(rk_mon_cli[mon,pi,li,lj]) or np.isnan(var_mon[i*12+mon,pi,li,lj]): 
                             continue
                         dR_TLL[i*12+mon,li,lj] += rk_mon_cli[mon,pi,li,lj] \

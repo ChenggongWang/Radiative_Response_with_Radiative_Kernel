@@ -50,16 +50,16 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
                                                 (-var_cont['rlutcs'].values) )
     plev_weight = RK_plev_weight(f_RK.plev.values)
     
-    dR_wv_lw    = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.lw_q.values     , plev_weight)
-    dR_wv_sw    = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.sw_q.values     , plev_weight)
-    dR_wvcs_lw  = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.lwclr_q.values  , plev_weight)
-    dR_wvcs_sw  = RK_compute_TPLL_plev_fast2(omega_wv    ,f_RK.swclr_q.values  , plev_weight)
+    dR_wv_lw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.lw_q.values     , plev_weight)
+    dR_wv_sw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.sw_q.values     , plev_weight)
+    dR_wvcs_lw  = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.lwclr_q.values  , plev_weight)
+    dR_wvcs_sw  = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.swclr_q.values  , plev_weight)
     
-    dR_Ta       = RK_compute_TPLL_plev_fast2(ta_anom     ,f_RK.lw_ta.values    , plev_weight)
-    dR_Tacs     = RK_compute_TPLL_plev_fast2(ta_anom     ,f_RK.lwclr_ta.values , plev_weight)
+    dR_Ta       = RK_compute_TPLL_plev_fast(ta_anom     ,f_RK.lw_ta.values    , plev_weight)
+    dR_Tacs     = RK_compute_TPLL_plev_fast(ta_anom     ,f_RK.lwclr_ta.values , plev_weight)
     
-    dR_LR       = RK_compute_TPLL_plev_fast2(ta_anom_lr  ,f_RK.lw_ta.values    , plev_weight)
-    dR_LRcs     = RK_compute_TPLL_plev_fast2(ta_anom_lr  ,f_RK.lwclr_ta.values , plev_weight)
+    dR_LR       = RK_compute_TPLL_plev_fast(ta_anom_lr  ,f_RK.lw_ta.values    , plev_weight)
+    dR_LRcs     = RK_compute_TPLL_plev_fast(ta_anom_lr  ,f_RK.lwclr_ta.values , plev_weight)
     
     dR_Ts       = RK_compute_TLL_fast       (ts_anom     ,f_RK.lw_ts.values     )
     dR_Tscs     = RK_compute_TLL_fast       (ts_anom     ,f_RK.lwclr_ts.values  )

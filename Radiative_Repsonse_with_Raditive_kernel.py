@@ -28,7 +28,8 @@ def global_mean_xarray(ds_XXLL):
     return tmp_XX
 
 def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
-     
+
+    check_dimensions(var_pert, var_cont,f_RK)
     ta_anom = diff_pert_mon_cont_12mon_TPLL_fast(var_pert['ta'].values,var_cont['ta'].values)
     omega_wv = omega_wv_fast(var_pert['hus'].values,\
                              var_cont['hus'].values,\
@@ -144,6 +145,24 @@ def compile_njit_functions():
     RK_compute_TLL_fast (dummy_TLL, dummy_TLL12)
     RK_compute_TPLL_plev_fast(dummy_TPLL, dummy_TPLL12, dummy_plev)
     print("  | finished!")
+
+def check_dimensions(var_pert, var_cont,f_RK):    
+    var2d_list = 'ts rlut rsdt  rsut  rlutcs rsutcs rsus  rsds'.split()
+    var3d_list = 'ta hus'.split()
+    f_RK_2d_shape = f_RK.lw_ts.shape[1:]
+    f_RK_3d_shape = f_RK.lw_ta.shape[1:]
+    flag = 1
+    for var in var2d_list:
+        if not (var_pert[var].shape[1:] == f_RK_2d_shape) :
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_pert[var].shape}')
+        if not (var_cond[var].shape[1:] == f_RK_2d_shape) :
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_cond[var].shape}')
+    for var in var3d_list:
+        if not (var_pert[var].shape[1:] == f_RK_3d_shape):
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_pert[var].shape}')
+        if not (var_cond[var].shape[1:] == f_RK_3d_shape) :
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_cond[var].shape}')
+    return
 
 def time_sanity_check(time_v, info):
     month_serise = time_v['time.year']*12+time_v['time.month']

@@ -49,7 +49,7 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
                                                 (var_cont['rsdt'].values-var_cont['rsutcs'].values) )
     dRcs_lw = diff_pert_mon_cont_12mon_TLL_fast((-var_pert['rlutcs'].values),\
                                                 (-var_cont['rlutcs'].values) )
-    plev_weight = RK_plev_weight(f_RK.plev.values)
+    plev_weight = RK_plev_weight(f_RK.plev)
     
     dR_wv_lw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.lw_q.values     , plev_weight)
     dR_wv_sw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.sw_q.values     , plev_weight)
@@ -155,13 +155,13 @@ def check_dimensions(var_pert, var_cont,f_RK):
     for var in var2d_list:
         if not (var_pert[var].shape[1:] == f_RK_2d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_pert[var].shape}')
-        if not (var_cond[var].shape[1:] == f_RK_2d_shape) :
-            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_cond[var].shape}')
+        if not (var_cont[var].shape[1:] == f_RK_2d_shape) :
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_cont[var].shape}')
     for var in var3d_list:
         if not (var_pert[var].shape[1:] == f_RK_3d_shape):
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_pert[var].shape}')
-        if not (var_cond[var].shape[1:] == f_RK_3d_shape) :
-            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_cond[var].shape}')
+        if not (var_cont[var].shape[1:] == f_RK_3d_shape) :
+            raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_cont[var].shape}')
     return
 
 def time_sanity_check(time_v, info):
@@ -305,11 +305,24 @@ def RK_compute_TPLL_plev_fast(var_mon, rk_mon_cli, plev_weight):
                                                  * plev_weight[pi]
     return dR_TLL
 
-def RK_plev_weight(plev):
+def RK_plev_weight(plev_rk):
     """
     Create plev weight
-    assume the surface pressure is 1.01e5 Pa 
+    assume the surface pressure is 1.01e3 hPa 
     """
+    # units check for plev in kernel file
+    try:
+        plev_rk.attrs['units'] 
+    except:
+        raise Exception("Error: please check plev or its units")
+        
+    if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
+        plev = plev_rk.values*100
+    elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
+        plev = plev_rk
+    else:
+        raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
+    # compute weight for kernel files
     plev_weight = np.empty_like(plev, dtype = np.float32)
     if ((np.diff(plev) > 0).all()):
 #         print('plev increase')

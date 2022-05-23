@@ -25,7 +25,7 @@ The time for 150 years 2x2.5 [latxlon] data (\~4GB) is less than 10 seconds on p
 
 > `decompose_dR_rk_toa_core(var_pert, var_cont,f_RK )` is the core function to call 
 > 
-> it will return 
+> it will return a xarray dataset than contains variable as following (also its global-mean, append `_gm` in the variabel name):
 
 >`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv} ,\qquad lw R_{toa}$ change due to `water vapor(wv)` change
 >

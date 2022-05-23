@@ -94,8 +94,8 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['dR_tscs']    = (('time','lat','lon'),dR_Tscs)
     ds_write['dR_alb']     = (('time','lat','lon'),dR_alb)
     ds_write['dR_albcs']   = (('time','lat','lon'),dR_albcs)
-    ds_write['dR_c_lw']    = (('time','lat','lon'),dR_c_lw)
-    ds_write['dR_c_sw']    = (('time','lat','lon'),dR_c_sw)
+    ds_write['dR_cloud_lw']    = (('time','lat','lon'),dR_c_lw)
+    ds_write['dR_cloud_sw']    = (('time','lat','lon'),dR_c_sw)
     ds_write['Dcs_lw']     = (('time','lat','lon'),Dcs_lw)
     ds_write['Dcs_sw']     = (('time','lat','lon'),Dcs_sw)
     ds_write['dR_sw']      = (('time','lat','lon'),dR_sw)
@@ -117,8 +117,8 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['dR_tscs_gm']    = (('time'),global_mean_xarray(ds_write.dR_tscs   ).values)
     ds_write['dR_alb_gm']     = (('time'),global_mean_xarray(ds_write.dR_alb    ).values)
     ds_write['dR_albcs_gm']   = (('time'),global_mean_xarray(ds_write.dR_albcs  ).values)
-    ds_write['dR_c_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_c_lw   ).values)
-    ds_write['dR_c_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_c_sw   ).values)
+    ds_write['dR_cloud_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_lw   ).values)
+    ds_write['dR_cloud_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_sw   ).values)
     ds_write['Dcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_lw    ).values)
     ds_write['Dcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_sw    ).values)
     ds_write['dR_sw_gm']      = (('time'),global_mean_xarray(ds_write.dR_sw     ).values)
@@ -250,7 +250,7 @@ def omega_wv_fast(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
     """
     omega_wv = np.empty_like(hus_pert_TPLL,dtype = np.float32)
     for mon in numba.prange(ta_cont_TPLL.shape[0]):
-        for pi in range(ta_cont_TPLL.shape[1]):
+        for pi in numba.prange(ta_cont_TPLL.shape[1]):
             dT_dlnq_mon = _dT_dlnqs_fast(ta_cont_TPLL[mon,pi,:,:])
             for i in range(int(hus_pert_TPLL.shape[0]/12)):
                 omega_wv[i*12+mon,pi,:,:] =  dT_dlnq_mon \

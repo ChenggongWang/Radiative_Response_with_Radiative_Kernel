@@ -1,20 +1,73 @@
 # Radiative_Response_with_Radiative_Kernel
 
-Use the radiative kernel ([Soden et al. 2008](https://doi.org/10.1175/2007JCLI2110.1)) to diagnose the raditive response <img src="https://render.githubusercontent.com/render/math?math=\color{grey50}dR_i">  due to different climate variables i: temperature, water vapor, albedo and cloud. 
+Use the radiative kernel ([Soden et al. 2008](https://doi.org/10.1175/2007JCLI2110.1)) to diagnose the TOA raditive response $dR_i$  due to change in  climate variables i: temperature (ta and ts), water vapor (wv), albedo and cloud. 
 
 Then we can compute the climate feedbacks: 
 
-<img src="https://render.githubusercontent.com/render/math?math=\color{grey50}\lambda_i = dR_i/dT$">
+$$\lambda_i = \frac{dR_i}{dts_{gm}}$$
 
-The example code show how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is availabel at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file. The regridded data is avaliable [here](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing).
+where ${dts_{gm}}$ is the global mean surface temp. change.
 
-[Numba](https://numba.pydata.org/) is used to parallel and accelerate the computation (recommand for large dataset). 
+# Example 
 
-A version of functions that use xarray and is easier to understand is also provided for understanding and modification (see the example code). 
+The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/blob/main/R3k_example.ipynb)) shows how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is availabel at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file. The regridded data can be downloaded from [google drive](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing) or [princeton.edu compressed file](https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar).
 
 ## r3k_env.yml
 The python environment file to run the example.
 
-## Access data for the example code:
-https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing
+[Numba](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset). 
 
+A version of functions that use xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
+
+The time for 150 years 2x2.5 [latxlon] data (\~4GB) is less than 10 seconds on princeton jupyterhub. Using Xarray only takes about 1\~2 mins.
+
+# Usage
+
+> `decompose_dR_rk_toa_core(var_pert, var_cont,f_RK )` is the core function to call 
+> 
+> it will return 
+
+>`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv} ,\qquad lw R_{toa}$ change due to `water vapor(wv)` change
+>
+>`dR_wv_sw  ` : $\frac{\partial R_{all-sky\ sw}}{\partial wv}    $
+>
+>`dR_wvcs_lw` : $\frac{\partial R_{clr-sky\ lw}}{\partial wv}    $
+>
+>`dR_wvcs_sw` : $\frac{\partial R_{clr-sky\ sw}}{\partial wv}    $
+>
+>`dR_ta     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ta} ,\qquad lw R_{toa}$ change due to `air temp.(ta)` change (including lapse rate change)
+>
+>`dR_tacs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ta}    $
+>
+>`dR_lr     ` : $\frac{\partial R_{all-sky\ lw}}{\partial lr} ,\qquad lw R_{toa}$ change due to `lapse rate(lt)` change (vertial structure differs from dts)
+>
+>`dR_lrcs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial lr}    $
+>
+>`dR_ts     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ts} ,\qquad lw R_{toa}$ change due to `surface temp.(ts)` change (including lapse rate change)
+>
+>`dR_tscs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ts}    $
+>
+>`dR_alb    ` : $\frac{\partial R_{all-sky\ sw}}{\partial albedo}  ,\qquad sw R_{toa}$ change due to `surface albedo(alb)` change 
+>
+>`dR_albcs  ` : $\frac{\partial R_{clr-sky\ sw}}{\partial albedo}$
+>
+>`dR_cloud_lw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}  ,\qquad lw R_{toa}$ change due to `cloud` change (compute as residue)
+>
+>`dR_cloud_sw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud} $
+>
+>`Dcs_lw    ` : $      dF_{clr-sky\ lw}                          $, estimated `clear-sky lw forcing`
+>
+>`Dcs_sw    ` : $      dF_{clr-sky\ sw}                          $, estimated `clear-sky sw forcing`
+>
+>`dR_sw     ` : $      dR_{all-sky\ sw}                          $, all-sky TOA sw net flux change
+>
+>`dR_lw     ` : $      dR_{all-sky\ lw}                          $, all-sky TOA lw net flux change
+>
+>`dRcs_sw   ` : $      dR_{clr-sky\ sw}                          $, clear-sky TOA sw net flux change
+>
+>`dRcs_lw   ` : $      dR_{clr-sky\ lw}                          $, clear-sky TOA lw net flux change
+>
+>`ts        ` : $      ts                                        $, surface temperature 
+>
+>`dts       ` : $      dts                                       $, 'surface temperature change'
+>

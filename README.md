@@ -27,33 +27,33 @@ The time for 150 years 2x2.5 [latxlon] data (\~4GB) is less than 10 seconds on p
 > 
 > it will return a xarray dataset than contains variable as following (also its global-mean, append `_gm` in the variabel name):
 
->`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv} ,\qquad lw R_{toa}$ change due to `water vapor(wv)` change
+>`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv}\Delta wv ,\qquad lw\ R_{toa}$ change due to `water vapor(wv)` change
 >
->`dR_wv_sw  ` : $\frac{\partial R_{all-sky\ sw}}{\partial wv}    $
+>`dR_wv_sw  ` : $\frac{\partial R_{all-sky\ sw}}{\partial wv}\Delta wv    $
 >
->`dR_wvcs_lw` : $\frac{\partial R_{clr-sky\ lw}}{\partial wv}    $
+>`dR_wvcs_lw` : $\frac{\partial R_{clr-sky\ lw}}{\partial wv}\Delta wv    $
 >
->`dR_wvcs_sw` : $\frac{\partial R_{clr-sky\ sw}}{\partial wv}    $
+>`dR_wvcs_sw` : $\frac{\partial R_{clr-sky\ sw}}{\partial wv}\Delta wv    $
 >
->`dR_ta     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ta} ,\qquad lw R_{toa}$ change due to `air temp.(ta)` change (including lapse rate change)
+>`dR_ta     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ta}\Delta ta ,\qquad lw\ R_{toa}$ change due to `air temp.(ta)` change (including lapse rate change)
 >
->`dR_tacs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ta}    $
+>`dR_tacs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ta}\Delta ta    $
 >
->`dR_lr     ` : $\frac{\partial R_{all-sky\ lw}}{\partial lr} ,\qquad lw R_{toa}$ change due to `lapse rate(lt)` change (vertial structure differs from dts)
+>`dR_lr     ` : $\frac{\partial R_{all-sky\ lw}}{\partial lr}\Delta lr ,\qquad lw\ R_{toa}$ change due to `lapse rate(lt)` change (vertial structure differs from dts)
 >
->`dR_lrcs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial lr}    $
+>`dR_lrcs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial lr}\Delta lr    $
 >
->`dR_ts     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ts} ,\qquad lw R_{toa}$ change due to `surface temp.(ts)` change (including lapse rate change)
+>`dR_ts     ` : $\frac{\partial R_{all-sky\ lw}}{\partial ts}\Delta ts ,\qquad lw\ R_{toa}$ change due to `surface temp.(ts)` change (including lapse rate change)
 >
->`dR_tscs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ts}    $
+>`dR_tscs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ts}\Delta ts    $
 >
->`dR_alb    ` : $\frac{\partial R_{all-sky\ sw}}{\partial albedo}  ,\qquad sw R_{toa}$ change due to `surface albedo(alb)` change 
+>`dR_alb    ` : $\frac{\partial R_{all-sky\ sw}}{\partial albedo}\Delta albedo  ,\qquad sw\ R_{toa}$ change due to `surface albedo(alb)` change 
 >
->`dR_albcs  ` : $\frac{\partial R_{clr-sky\ sw}}{\partial albedo}$
+>`dR_albcs  ` : $\frac{\partial R_{clr-sky\ sw}}{\partial albedo}\Delta albedo$
 >
->`dR_cloud_lw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}  ,\qquad lw R_{toa}$ change due to `cloud` change (compute as residue)
+>`dR_cloud_lw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}\Delta cloud ,\qquad lw\ R_{toa}$ change due to `cloud` change (compute as residue)
 >
->`dR_cloud_sw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud} $
+>`dR_cloud_sw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}\Delta cloud$
 >
 >`Dcs_lw    ` : $      dF_{clr-sky\ lw}                          $, estimated `clear-sky lw forcing`
 >

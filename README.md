@@ -16,7 +16,9 @@ The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radia
 The python environment file to run the example.
 Everything is common (`xarray` to load/create netcdf data, `numpy`, `matplotlib` to show results) except `Numba`.
 
-[`Numba`](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset). 
+[`Numba`](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset or many dataset/model/experiments). 
+
+>For jobs that are not time sensitive, you should be able to use numpy or xarray version of functions without any config on environments. 
 
 A version of functions that use only numpy/xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
 

@@ -32,7 +32,6 @@ def decompose_dR_rk_toa_core_xarray(var_pert, var_cont,f_RK ):
     ts_anom = var_pert['ts'].groupby('time.month') - var_cont['ts']
     ta_anom_lr = ta_anom - ts_anom
     omega_wv = omega_wv_xarray (var_pert['hus'], var_cont['hus'], var_cont['ta'])
-    #### dt, dts, omega_wv, dRt_l, dRt_s, dRt_lcs, dRt_scs
     alb_pert = var_pert['rsus']/var_pert['rsds']
     alb_pert = alb_pert.where(np.isfinite(alb_pert),0)
     alb_cont = var_cont['rsus']/var_cont['rsds']
@@ -52,17 +51,17 @@ def decompose_dR_rk_toa_core_xarray(var_pert, var_cont,f_RK ):
     dR_wv_sw    = RK_compute_TPLL(omega_wv   ,f_RK.sw_q     , plev_weight)
     dR_wvcs_lw  = RK_compute_TPLL(omega_wv   ,f_RK.lwclr_q  , plev_weight)
     dR_wvcs_sw  = RK_compute_TPLL(omega_wv   ,f_RK.swclr_q  , plev_weight)
-    
+
     dR_Ta       = RK_compute_TPLL(ta_anom    ,f_RK.lw_ta    , plev_weight)
     dR_Tacs     = RK_compute_TPLL(ta_anom    ,f_RK.lwclr_ta , plev_weight)
     
     dR_LR       = RK_compute_TPLL(ta_anom_lr ,f_RK.lw_ta    , plev_weight)
     dR_LRcs     = RK_compute_TPLL(ta_anom_lr ,f_RK.lwclr_ta , plev_weight)
     
-    dR_Ts       = RK_compute_suf (ts_anom     ,f_RK.lw_ts      )
-    dR_Tscs     = RK_compute_suf (ts_anom     ,f_RK.lwclr_ts   )
-    dR_alb      = RK_compute_suf (alb_anom*100,f_RK.sw_alb     )
-    dR_albcs    = RK_compute_suf (alb_anom*100,f_RK.swclr_alb  )
+    dR_Ts       = RK_compute_suf (ts_anom     ,f_RK.lw_ts          )
+    dR_Tscs     = RK_compute_suf (ts_anom     ,f_RK.lwclr_ts       )
+    dR_alb      = RK_compute_suf (alb_anom    ,f_RK.sw_alb   *100  )
+    dR_albcs    = RK_compute_suf (alb_anom    ,f_RK.swclr_alb*100  )
 
     ## dR due to cloud change
     Dcs_lw   = dRcs_lw - dR_Tacs - dR_Tscs - dR_wvcs_lw
@@ -71,7 +70,7 @@ def decompose_dR_rk_toa_core_xarray(var_pert, var_cont,f_RK ):
     D_sw     = Dcs_sw / 1.16
     dR_c_lw  = dR_lw - D_lw - dR_Ta - dR_Ts - dR_wv_lw
     dR_c_sw  = dR_sw - D_sw - dR_alb - dR_wv_sw
-    
+
     ## write to file
     ds_write = xr.Dataset()
     
@@ -79,51 +78,51 @@ def decompose_dR_rk_toa_core_xarray(var_pert, var_cont,f_RK ):
     ds_write.coords['lat']  = (('lat'),var_pert['ts'].coords['lat'].values)
     ds_write.coords['lon']  = (('lon'),var_pert['ts'].coords['lon'].values)
     
-    ds_write['dR_wv_lw']   = (('time','lat','lon'),dR_wv_lw.values)
-    ds_write['dR_wv_sw']   = (('time','lat','lon'),dR_wv_sw.values)
-    ds_write['dR_wvcs_lw'] = (('time','lat','lon'),dR_wvcs_lw.values)
-    ds_write['dR_wvcs_sw'] = (('time','lat','lon'),dR_wvcs_sw.values)
-    ds_write['dR_ta']      = (('time','lat','lon'),dR_Ta.values)
-    ds_write['dR_tacs']    = (('time','lat','lon'),dR_Tacs.values)
-    ds_write['dR_lr']      = (('time','lat','lon'),dR_LR.values)
-    ds_write['dR_lrcs']    = (('time','lat','lon'),dR_LRcs.values)
-    ds_write['dR_ts']      = (('time','lat','lon'),dR_Ts.values)
-    ds_write['dR_tscs']    = (('time','lat','lon'),dR_Tscs.values)
-    ds_write['dR_alb']     = (('time','lat','lon'),dR_alb.values)
-    ds_write['dR_albcs']   = (('time','lat','lon'),dR_albcs.values)
-    ds_write['dR_cloud_lw']= (('time','lat','lon'),dR_c_lw.values)
-    ds_write['dR_cloud_sw']= (('time','lat','lon'),dR_c_sw.values)
-    ds_write['Dcs_lw']     = (('time','lat','lon'),Dcs_lw.values)
-    ds_write['Dcs_sw']     = (('time','lat','lon'),Dcs_sw.values)
-    ds_write['dR_sw']      = (('time','lat','lon'),dR_sw.values)
-    ds_write['dR_lw']      = (('time','lat','lon'),dR_lw.values)
-    ds_write['dRcs_sw']    = (('time','lat','lon'),dRcs_sw.values)
-    ds_write['dRcs_lw']    = (('time','lat','lon'),dRcs_lw.values)
-    ds_write['ts']         = (('time','lat','lon'),var_pert['ts'].values)
-    ds_write['dts']        = (('time','lat','lon'),ts_anom.values)
+    ds_write['dR_wv_lw']   = (('time','lat','lon'),dR_wv_lw.values  .astype('float32'))
+    ds_write['dR_wv_sw']   = (('time','lat','lon'),dR_wv_sw.values  .astype('float32'))
+    ds_write['dR_wvcs_lw'] = (('time','lat','lon'),dR_wvcs_lw.values.astype('float32'))
+    ds_write['dR_wvcs_sw'] = (('time','lat','lon'),dR_wvcs_sw.values.astype('float32'))
+    ds_write['dR_ta']      = (('time','lat','lon'),dR_Ta.values     .astype('float32'))
+    ds_write['dR_tacs']    = (('time','lat','lon'),dR_Tacs.values   .astype('float32'))
+    ds_write['dR_lr']      = (('time','lat','lon'),dR_LR.values     .astype('float32'))
+    ds_write['dR_lrcs']    = (('time','lat','lon'),dR_LRcs.values   .astype('float32'))
+    ds_write['dR_ts']      = (('time','lat','lon'),dR_Ts.values     .astype('float32'))
+    ds_write['dR_tscs']    = (('time','lat','lon'),dR_Tscs.values   .astype('float32'))
+    ds_write['dR_alb']     = (('time','lat','lon'),dR_alb.values    .astype('float32'))
+    ds_write['dR_albcs']   = (('time','lat','lon'),dR_albcs.values  .astype('float32'))
+    ds_write['dR_cloud_lw']= (('time','lat','lon'),dR_c_lw.values   .astype('float32'))
+    ds_write['dR_cloud_sw']= (('time','lat','lon'),dR_c_sw.values   .astype('float32'))
+    ds_write['Dcs_lw']     = (('time','lat','lon'),Dcs_lw.values    .astype('float32'))
+    ds_write['Dcs_sw']     = (('time','lat','lon'),Dcs_sw.values    .astype('float32'))
+    ds_write['dR_sw']      = (('time','lat','lon'),dR_sw.values     .astype('float32'))
+    ds_write['dR_lw']      = (('time','lat','lon'),dR_lw.values     .astype('float32'))
+    ds_write['dRcs_sw']    = (('time','lat','lon'),dRcs_sw.values   .astype('float32'))
+    ds_write['dRcs_lw']    = (('time','lat','lon'),dRcs_lw.values   .astype('float32'))
+    ds_write['ts']         = (('time','lat','lon'),var_pert['ts'].values.astype('float32'))
+    ds_write['dts']        = (('time','lat','lon'),ts_anom.values   .astype('float32'))
     
-    ds_write['dR_wv_lw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_lw  ).values)
-    ds_write['dR_wv_sw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_sw  ).values)
-    ds_write['dR_wvcs_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_lw).values)
-    ds_write['dR_wvcs_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_sw).values)
-    ds_write['dR_ta_gm']      = (('time'),global_mean_xarray(ds_write.dR_ta     ).values)
-    ds_write['dR_tacs_gm']    = (('time'),global_mean_xarray(ds_write.dR_tacs   ).values)
-    ds_write['dR_lr_gm']      = (('time'),global_mean_xarray(ds_write.dR_lr     ).values)
-    ds_write['dR_lrcs_gm']    = (('time'),global_mean_xarray(ds_write.dR_lrcs   ).values)
-    ds_write['dR_ts_gm']      = (('time'),global_mean_xarray(ds_write.dR_ts     ).values)
-    ds_write['dR_tscs_gm']    = (('time'),global_mean_xarray(ds_write.dR_tscs   ).values)
-    ds_write['dR_alb_gm']     = (('time'),global_mean_xarray(ds_write.dR_alb    ).values)
-    ds_write['dR_albcs_gm']   = (('time'),global_mean_xarray(ds_write.dR_albcs  ).values)
-    ds_write['dR_cloud_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_lw   ).values)
-    ds_write['dR_cloud_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_sw   ).values)
-    ds_write['Dcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_lw    ).values)
-    ds_write['Dcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_sw    ).values)
-    ds_write['dR_sw_gm']      = (('time'),global_mean_xarray(ds_write.dR_sw     ).values)
-    ds_write['dR_lw_gm']      = (('time'),global_mean_xarray(ds_write.dR_lw     ).values)
-    ds_write['dRcs_sw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_sw   ).values)
-    ds_write['dRcs_lw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_lw   ).values)
-    ds_write['ts_gm']         = (('time'),global_mean_xarray(ds_write.ts        ).values)
-    ds_write['dts_gm']        = (('time'),global_mean_xarray(ds_write.dts       ).values)
+    ds_write['dR_wv_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_lw    ).values.astype('float32'))
+    ds_write['dR_wv_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_sw    ).values.astype('float32'))
+    ds_write['dR_wvcs_lw_gm']  = (('time'),global_mean_xarray(ds_write.dR_wvcs_lw  ).values.astype('float32'))
+    ds_write['dR_wvcs_sw_gm']  = (('time'),global_mean_xarray(ds_write.dR_wvcs_sw  ).values.astype('float32'))
+    ds_write['dR_ta_gm']       = (('time'),global_mean_xarray(ds_write.dR_ta       ).values.astype('float32'))
+    ds_write['dR_tacs_gm']     = (('time'),global_mean_xarray(ds_write.dR_tacs     ).values.astype('float32'))
+    ds_write['dR_lr_gm']       = (('time'),global_mean_xarray(ds_write.dR_lr       ).values.astype('float32'))
+    ds_write['dR_lrcs_gm']     = (('time'),global_mean_xarray(ds_write.dR_lrcs     ).values.astype('float32'))
+    ds_write['dR_ts_gm']       = (('time'),global_mean_xarray(ds_write.dR_ts       ).values.astype('float32'))
+    ds_write['dR_tscs_gm']     = (('time'),global_mean_xarray(ds_write.dR_tscs     ).values.astype('float32'))
+    ds_write['dR_alb_gm']      = (('time'),global_mean_xarray(ds_write.dR_alb      ).values.astype('float32'))
+    ds_write['dR_albcs_gm']    = (('time'),global_mean_xarray(ds_write.dR_albcs    ).values.astype('float32'))
+    ds_write['dR_cloud_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_cloud_lw ).values.astype('float32'))
+    ds_write['dR_cloud_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_cloud_sw ).values.astype('float32'))
+    ds_write['Dcs_lw_gm']      = (('time'),global_mean_xarray(ds_write.Dcs_lw      ).values.astype('float32'))
+    ds_write['Dcs_sw_gm']      = (('time'),global_mean_xarray(ds_write.Dcs_sw      ).values.astype('float32'))
+    ds_write['dR_sw_gm']       = (('time'),global_mean_xarray(ds_write.dR_sw       ).values.astype('float32'))
+    ds_write['dR_lw_gm']       = (('time'),global_mean_xarray(ds_write.dR_lw       ).values.astype('float32'))
+    ds_write['dRcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.dRcs_sw     ).values.astype('float32'))
+    ds_write['dRcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.dRcs_lw     ).values.astype('float32'))
+    ds_write['ts_gm']          = (('time'),global_mean_xarray(ds_write.ts          ).values.astype('float32'))
+    ds_write['dts_gm']         = (('time'),global_mean_xarray(ds_write.dts         ).values.astype('float32'))
     return ds_write
 
 def check_dimensions(var_pert, var_cont,f_RK):   
@@ -247,7 +246,6 @@ def RK_compute_suf(var, rk):
 
 def RK_compute_TPLL(var, rk, plev_weight):
     tmp = var.groupby('time.month')*rk
-    
     dR = tmp *plev_weight
     dR = dR.sum(dim='plev',skipna=True)
     return dR

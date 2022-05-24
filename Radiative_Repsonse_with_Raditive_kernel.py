@@ -105,28 +105,28 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['ts']         = (('time','lat','lon'),var_pert['ts'].values)
     ds_write['dts']        = (('time','lat','lon'),ts_anom)
     
-    ds_write['dR_wv_lw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_lw  ).values)
-    ds_write['dR_wv_sw_gm']   = (('time'),global_mean_xarray(ds_write.dR_wv_sw  ).values)
-    ds_write['dR_wvcs_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_lw).values)
-    ds_write['dR_wvcs_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_wvcs_sw).values)
-    ds_write['dR_ta_gm']      = (('time'),global_mean_xarray(ds_write.dR_ta     ).values)
-    ds_write['dR_tacs_gm']    = (('time'),global_mean_xarray(ds_write.dR_tacs   ).values)
-    ds_write['dR_lr_gm']      = (('time'),global_mean_xarray(ds_write.dR_lr     ).values)
-    ds_write['dR_lrcs_gm']    = (('time'),global_mean_xarray(ds_write.dR_lrcs   ).values)
-    ds_write['dR_ts_gm']      = (('time'),global_mean_xarray(ds_write.dR_ts     ).values)
-    ds_write['dR_tscs_gm']    = (('time'),global_mean_xarray(ds_write.dR_tscs   ).values)
-    ds_write['dR_alb_gm']     = (('time'),global_mean_xarray(ds_write.dR_alb    ).values)
-    ds_write['dR_albcs_gm']   = (('time'),global_mean_xarray(ds_write.dR_albcs  ).values)
-    ds_write['dR_cloud_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_lw   ).values)
-    ds_write['dR_cloud_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_cloud_sw   ).values)
-    ds_write['Dcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_lw    ).values)
-    ds_write['Dcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.Dcs_sw    ).values)
-    ds_write['dR_sw_gm']      = (('time'),global_mean_xarray(ds_write.dR_sw     ).values)
-    ds_write['dR_lw_gm']      = (('time'),global_mean_xarray(ds_write.dR_lw     ).values)
-    ds_write['dRcs_sw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_sw   ).values)
-    ds_write['dRcs_lw_gm']    = (('time'),global_mean_xarray(ds_write.dRcs_lw   ).values)
-    ds_write['ts_gm']         = (('time'),global_mean_xarray(ds_write.ts        ).values)
-    ds_write['dts_gm']        = (('time'),global_mean_xarray(ds_write.dts       ).values)
+    ds_write['dR_wv_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_lw    ).values.astype('float32'))
+    ds_write['dR_wv_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_sw    ).values.astype('float32'))
+    ds_write['dR_wvcs_lw_gm']  = (('time'),global_mean_xarray(ds_write.dR_wvcs_lw  ).values.astype('float32'))
+    ds_write['dR_wvcs_sw_gm']  = (('time'),global_mean_xarray(ds_write.dR_wvcs_sw  ).values.astype('float32'))
+    ds_write['dR_ta_gm']       = (('time'),global_mean_xarray(ds_write.dR_ta       ).values.astype('float32'))
+    ds_write['dR_tacs_gm']     = (('time'),global_mean_xarray(ds_write.dR_tacs     ).values.astype('float32'))
+    ds_write['dR_lr_gm']       = (('time'),global_mean_xarray(ds_write.dR_lr       ).values.astype('float32'))
+    ds_write['dR_lrcs_gm']     = (('time'),global_mean_xarray(ds_write.dR_lrcs     ).values.astype('float32'))
+    ds_write['dR_ts_gm']       = (('time'),global_mean_xarray(ds_write.dR_ts       ).values.astype('float32'))
+    ds_write['dR_tscs_gm']     = (('time'),global_mean_xarray(ds_write.dR_tscs     ).values.astype('float32'))
+    ds_write['dR_alb_gm']      = (('time'),global_mean_xarray(ds_write.dR_alb      ).values.astype('float32'))
+    ds_write['dR_albcs_gm']    = (('time'),global_mean_xarray(ds_write.dR_albcs    ).values.astype('float32'))
+    ds_write['dR_cloud_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_cloud_lw ).values.astype('float32'))
+    ds_write['dR_cloud_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_cloud_sw ).values.astype('float32'))
+    ds_write['Dcs_lw_gm']      = (('time'),global_mean_xarray(ds_write.Dcs_lw      ).values.astype('float32'))
+    ds_write['Dcs_sw_gm']      = (('time'),global_mean_xarray(ds_write.Dcs_sw      ).values.astype('float32'))
+    ds_write['dR_sw_gm']       = (('time'),global_mean_xarray(ds_write.dR_sw       ).values.astype('float32'))
+    ds_write['dR_lw_gm']       = (('time'),global_mean_xarray(ds_write.dR_lw       ).values.astype('float32'))
+    ds_write['dRcs_sw_gm']     = (('time'),global_mean_xarray(ds_write.dRcs_sw     ).values.astype('float32'))
+    ds_write['dRcs_lw_gm']     = (('time'),global_mean_xarray(ds_write.dRcs_lw     ).values.astype('float32'))
+    ds_write['ts_gm']          = (('time'),global_mean_xarray(ds_write.ts          ).values.astype('float32'))
+    ds_write['dts_gm']         = (('time'),global_mean_xarray(ds_write.dts         ).values.astype('float32'))
     return ds_write
 
 def compile_njit_functions():
@@ -230,7 +230,7 @@ def RK_plev_weight(plev_rk):
     if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
         plev = plev_rk.values*100
     elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
-        plev = plev_rk.values*100
+        plev = plev_rk.values
     else:
         raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
     # compute weight for kernel files

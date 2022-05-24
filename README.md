@@ -24,7 +24,7 @@ A version of functions that use only numpy/xarray and is easier to understand is
 
 The time for 150 years 2x2.5 [latxlon] data (\~4GB) is ~ 10 seconds on princeton jupyterhub (expect similar time for CPUs>4). 
 Using numpy only takes ~ 30 seconds (1 CPU needed).
-Using Xarray only takes 1\~2 mins (1 CPU needed).
+Using Xarray only takes 1\~2 mins (1 CPU needed, may require large memory).
 
 # Usage
 

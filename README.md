@@ -81,3 +81,6 @@ A version of functions that use only numpy/xarray and is easier to understand is
 >
 >`dts       ` : $      dts                                       $, 'surface temperature change'
 >
+
+# To do plan
+Add results based on RH to account for compensation between WV and LR

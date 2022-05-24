@@ -237,7 +237,7 @@ def omega_wv_xarray(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
 
     dT_dlnq_mon = _dT_dlnqs(ta_cont_TPLL)
     omega_wv =  dT_dlnq_mon *(np.log(hus_pert_TPLL).groupby('time.month')\
-                             -np.log(hus_cont_TPLL))
+                             -np.log(hus_cont_TPLL)).groupby('time.month')
     return omega_wv
 
 

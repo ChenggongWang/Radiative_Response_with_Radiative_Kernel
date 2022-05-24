@@ -26,7 +26,7 @@ A version of functions that use only numpy/xarray and is easier to understand is
 >
 >Using numpy only takes ~ 30 seconds (single CPU).
 >
->Using Xarray only takes 1\~2 mins (single CPU, may require large memory).
+>Using Xarray only takes 1\~2 mins (single CPU).
 
 # Usage
 

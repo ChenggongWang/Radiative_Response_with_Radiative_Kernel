@@ -127,23 +127,43 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['dts_gm']        = (('time'),global_mean_xarray(ds_write.dts       ).values)
     return ds_write
 
-def check_dimensions(var_pert, var_cont,f_RK):    
+def check_dimensions(var_pert, var_cont,f_RK):   
+    adjust_pressure_units(f_RK) 
     var2d_list = 'ts rlut rsdt  rsut  rlutcs rsutcs rsus  rsds'.split()
     var3d_list = 'ta hus'.split()
     f_RK_2d_shape = f_RK.lw_ts.shape[1:]
     f_RK_3d_shape = f_RK.lw_ta.shape[1:]
     flag = 1
+    if f_RK.month.size!=12:
+        raise Exception('Error: kernel files are not 12 month climatology')
     for var in var2d_list:
         if not (var_pert[var].shape[1:] == f_RK_2d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_pert[var].shape}')
         if not (var_cont[var].shape[1:] == f_RK_2d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_cont[var].shape}')
+        if var_pert[var].time.size%12!=0:
+            print('Warning: data files are not nx12 month. Results could be wrong due to mismatch between kernal month and data month')
+        if var_cont[var].month.size!=12:
+            raise Exception('Error: control data files are not 12 month climatology')
     for var in var3d_list:
+        adjust_pressure_units(var_pert[var])
+        adjust_pressure_units(var_cont[var])
+        # check data dimensions # do not guarantee same axis values
         if not (var_pert[var].shape[1:] == f_RK_3d_shape):
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_pert[var].shape}')
         if not (var_cont[var].shape[1:] == f_RK_3d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_cont[var].shape}')
-    return
+        # checking time/month axis
+        if var_pert[var].time.size%12!=0:
+            print('Warning: data files are not nx12 month. Results could be wrong due to mismatch between kernal month and data month')
+        if var_cont[var].month.size[0]!=12:
+            raise Exception('Error: control data files are not 12 month climatology')
+            # check pressure level values
+        if not np.all(var_pert[var].plev.values == f_RK.plev.values):
+            raise Exception(f'Error: plev is not same: check kernel and data. rk: {f_RK.plev.values} | data {var}: {var_pert[var].plev.values}')
+        if not np.all(var_cont[var].plev.values == f_RK.plev.values) :
+            raise Exception(f'Error: plev is not same: check kernel and data. rk: {f_RK.plev.values} | data {var}: {var_cont[var].plev.values}')
+    return 
 
 def time_sanity_check(time_v, info):
     month_serise = time_v['time.year']*12+time_v['time.month']
@@ -157,6 +177,50 @@ def time_sanity_check(time_v, info):
         print('   >>>>: ' +info)
         return -1
     return 0
+
+def adjust_pressure_units(var):
+    if var.plev.attrs['units'] in ['mb','millibars','hPa','hpa',]:
+        var['plev'] = var.plev*100
+        var.plev.attrs['units'] = 'Pa'
+    elif var.plev.attrs['units'] in ['pa', 'Pa']:
+        pass
+    else:
+        raise Exception("Error: please check units of pressure level for dataset: plev not in ['Pa','mb','millibars','hPa','hpa',]")
+    return 
+    
+def RK_plev_weight(plev_rk):
+    """
+    Create plev weight
+    assume the surface pressure is 1.01e3 hPa 
+    """
+    # units check for plev in kernel file
+    try:
+        plev_rk.attrs['units'] 
+    except:
+        raise Exception("Error: Please check plev or its units. Assign with .attrs['units'] if not exist.")
+   
+    if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
+        plev = plev_rk.values*100
+    elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
+        plev = plev_rk.values
+    else:
+        raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
+    # compute weight for kernel files
+    plev_weight = np.empty_like(plev, dtype = np.float32)
+    if ((np.diff(plev) > 0).all()):
+#         print('plev increase')
+        plev_weight[-1] = (1.01e5-plev[-1])/1e4 +(plev[-1] - plev[-2])/2e4
+        plev_weight[0] = plev[0]/1e4 + (plev[1]-plev[0])/2e4
+        plev_weight[1:-1] = (plev[2:] - plev[:-2])/20000
+    elif ((np.diff(plev) < 0).all()):
+#         print('plev decrease')
+        plev_weight[0] = (1.01e5-plev[0])/1e4+(plev[0]- plev[1])/2e4
+        plev_weight[-1] = (plev[-2]-plev[-1])/2e4 + plev[-1]/1e4
+        plev_weight[1:-1] = (plev[:-2] - plev[2:])/2e4
+    else:
+        raise Exception("Error : plev is not monotonic")
+    return plev_weight
+    
 
 def alb_diff_pert_mon_cont_12mon_TLL_fast(pert_rsus,pert_rsds,cont_rsus,cont_rsds):
     """
@@ -253,78 +317,3 @@ def RK_compute_TPLL_plev_fast(var_mon, rk_mon_cli, plev_weight):
             var_tmp = np.where(np.isnan(rk_mon_cli[mon,pi,:,:]),0,var_tmp)
             dR_TLL[i,:,:] += rk_mon_cli_nonan[mon,pi,:,:]* var_tmp * plev_weight[pi]
     return dR_TLL
-
-def RK_plev_weight(plev_rk):
-    """
-    Create plev weight
-    assume the surface pressure is 1.01e3 hPa 
-    """
-    # units check for plev in kernel file
-    try:
-        plev_rk.attrs['units'] 
-    except:
-        raise Exception("Error: please check plev or its units")
-        
-    if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
-        plev = plev_rk.values*100
-    elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
-        plev = plev_rk
-    else:
-        raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
-    # compute weight for kernel files
-    plev_weight = np.empty_like(plev, dtype = np.float32)
-    if ((np.diff(plev) > 0).all()):
-#         print('plev increase')
-        plev_weight[-1] = (1.01e5-plev[-1])/1e4 +(plev[-1] - plev[-2])/2e4
-        plev_weight[0] = plev[0]/1e4 + (plev[1]-plev[0])/2e4
-        plev_weight[1:-1] = (plev[2:] - plev[:-2])/20000
-    elif ((np.diff(plev) < 0).all()):
-#         print('plev decrease')
-        plev_weight[0] = (1.01e5-plev[0])/1e4+(plev[0]- plev[1])/2e4
-        plev_weight[-1] = (plev[-2]-plev[-1])/2e4 + plev[-1]/1e4
-        plev_weight[1:-1] = (plev[:-2] - plev[2:])/2e4
-    else:
-        raise Exception("Error : plev is not monotonic")
-    return plev_weight
-    
-##  functions with xarray 
-def _dT_dlnqs(T):
-    # use CC-equation to derive dT/dln(q_s) 
-    dTdlnqs = np.empty_like(T,dtype = np.float32)
-    dTdlnqs = (T-29.65)**2/4302.64
-    return dTdlnqs
-
-
-def omega_wv_xarray(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
-    """
-    ALL inputs have to be xarray 
-    """
-
-    dT_dlnq_mon = _dT_dlnqs(ta_cont_TPLL)
-    omega_wv =  dT_dlnq_mon *(np.log(hus_pert_TPLL).groupby('time.month')\
-                             -np.log(hus_cont_TPLL)).groupby('time.month')
-    return omega_wv
-
-
-def RK_compute_suf(var, rk):
-    dR = var.groupby('time.month') *rk
-    return dR
-
-def RK_compute_TPLL(var, rk):
-    tmp = var.groupby('time.month')*rk
-    
-    # weighted by pressure and sum
-#     var = ta_anom
-#     plev_weight = var.plev.copy().values
-#     plev_weight[0] = (1.01e5 - var.plev[1])/20000
-#     plev_weight[-1] = (var.plev[-1].values-0)/20000
-#     plev_weight[1:-1] = (var.plev[:-2].values - var.plev[2:].values)/20000
-
-    # only correct for cmip6 data
-    plev_weight = [0.425, 0.75 , 1.125, 1.25 , 1., 1. , 1., \
-                   0.75 , 0.5  ,0.5  , 0.5  , 0.4  , 0.25 ,\
-                   0.2  , 0.15 , 0.1  , 0.075, 0.045,0.005]
-    plev_weight = xr.DataArray(plev_weight,var.plev.coords,dims=['plev'])
-    dR = tmp *plev_weight
-    dR = dR.sum(dim='plev',skipna=True)
-    return dR

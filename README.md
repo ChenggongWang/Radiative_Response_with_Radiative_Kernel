@@ -14,12 +14,15 @@ The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radia
 
 ## r3k_env.yml
 The python environment file to run the example.
+Everything is common (`xarray` to load/create netcdf data, `numpy`, `matplotlib` to show results) except `Numba`.
 
-[Numba](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset). 
+[`Numba`](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset). 
 
-A version of functions that use xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
+A version of functions that use only numpy/xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
 
-The time for 150 years 2x2.5 [latxlon] data (\~4GB) is less than 10 seconds on princeton jupyterhub. Using Xarray only takes about 1\~2 mins.
+The time for 150 years 2x2.5 [latxlon] data (\~4GB) is less than 10 seconds on princeton jupyterhub (expect similar time for CPUs>4). 
+Using numpy only takes ~ 30 seconds (1 CPU needed).
+Using Xarray only takes 1\~2 mins (1 CPU needed).
 
 # Usage
 

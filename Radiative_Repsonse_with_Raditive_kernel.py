@@ -1,5 +1,5 @@
 import numba
-from numba import njit
+from numba import njit,prange
 import numpy as np
 import xarray as xr
 
@@ -138,6 +138,14 @@ def compile_njit_functions():
     dummy_TLL = np.random.rand(36,3,4).astype('float32')
     dummy_TLL12 = np.random.rand(12,3,4).astype('float32')
     dummy_plev = np.random.rand(2).astype('float32')
+    
+#     diff_pert_mon_cont_12mon_TPLL_fast.py_func(dummy_TPLL, dummy_TPLL12)
+#     diff_pert_mon_cont_12mon_TLL_fast.py_func(dummy_TLL, dummy_TLL12)
+#     alb_diff_pert_mon_cont_12mon_TLL_fast.py_func(dummy_TLL, dummy_TLL, dummy_TLL12, dummy_TLL12)
+#     omega_wv_fast.py_func(dummy_TPLL, dummy_TPLL12, dummy_TPLL12)
+#     RK_compute_TLL_fast.py_func (dummy_TLL, dummy_TLL12)
+#     RK_compute_TPLL_plev_fast.py_func(dummy_TPLL, dummy_TPLL12, dummy_plev)
+    
     diff_pert_mon_cont_12mon_TPLL_fast(dummy_TPLL, dummy_TPLL12)
     diff_pert_mon_cont_12mon_TLL_fast(dummy_TLL, dummy_TLL12)
     alb_diff_pert_mon_cont_12mon_TLL_fast(dummy_TLL, dummy_TLL, dummy_TLL12, dummy_TLL12)
@@ -146,23 +154,44 @@ def compile_njit_functions():
     RK_compute_TPLL_plev_fast(dummy_TPLL, dummy_TPLL12, dummy_plev)
     print("  | finished!")
 
-def check_dimensions(var_pert, var_cont,f_RK):    
+def check_dimensions(var_pert, var_cont,f_RK):   
+    adjust_pressure_units(f_RK) 
     var2d_list = 'ts rlut rsdt  rsut  rlutcs rsutcs rsus  rsds'.split()
     var3d_list = 'ta hus'.split()
     f_RK_2d_shape = f_RK.lw_ts.shape[1:]
     f_RK_3d_shape = f_RK.lw_ta.shape[1:]
     flag = 1
+    if f_RK.month.size!=12:
+        raise Exception('Error: kernel files are not 12 month climatology')
     for var in var2d_list:
         if not (var_pert[var].shape[1:] == f_RK_2d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_pert[var].shape}')
         if not (var_cont[var].shape[1:] == f_RK_2d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ts.shape} | data {var}: {var_cont[var].shape}')
+        if var_pert[var].time.size%12!=0:
+            print('Warning: data files are not nx12 month. Results could be wrong due to mismatch between kernal month and data month')
+        if var_cont[var].month.size!=12:
+            raise Exception('Error: control data files are not 12 month climatology')
     for var in var3d_list:
+        adjust_pressure_units(var_pert[var])
+        adjust_pressure_units(var_cont[var])
+        # check data dimensions # do not guarantee same axis values
         if not (var_pert[var].shape[1:] == f_RK_3d_shape):
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_pert[var].shape}')
         if not (var_cont[var].shape[1:] == f_RK_3d_shape) :
             raise Exception(f'Error: Dimension is not same: check kernel and data. rk: {f_RK.lw_ta.shape} | data {var}: {var_cont[var].shape}')
-    return
+        # checking time/month axis
+        if var_pert[var].time.size%12!=0:
+            print('Warning: data files are not nx12 month. Results could be wrong due to mismatch between kernal month and data month')
+        if var_cont[var].month.size[0]!=12:
+            raise Exception('Error: control data files are not 12 month climatology')
+            # check pressure level values
+        if not np.all(var_pert[var].plev.values == f_RK.plev.values):
+            raise Exception(f'Error: plev is not same: check kernel and data. rk: {f_RK.plev.values} | data {var}: {var_pert[var].plev.values}')
+        if not np.all(var_cont[var].plev.values == f_RK.plev.values) :
+            raise Exception(f'Error: plev is not same: check kernel and data. rk: {f_RK.plev.values} | data {var}: {var_cont[var].plev.values}')
+    return 
+
 
 def time_sanity_check(time_v, info):
     month_serise = time_v['time.year']*12+time_v['time.month']
@@ -177,6 +206,50 @@ def time_sanity_check(time_v, info):
         return -1
     return 0
 
+def adjust_pressure_units(var):
+    if var.plev.attrs['units'] in ['mb','millibars','hPa','hpa',]:
+        var['plev'] = var.plev*100
+        var.plev.attrs['units'] = 'Pa'
+    elif var.plev.attrs['units'] in ['pa', 'Pa']:
+        pass
+    else:
+        raise Exception("Error: please check units of pressure level for dataset: plev not in ['Pa','mb','millibars','hPa','hpa',]")
+    return 
+    
+def RK_plev_weight(plev_rk):
+    """
+    Create plev weight
+    assume the surface pressure is 1.01e3 hPa 
+    """
+    # units check for plev in kernel file
+    try:
+        plev_rk.attrs['units'] 
+    except:
+        raise Exception("Error: Please check plev or its units. Assign with .attrs['units'] if not exist.")
+        
+    if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
+        plev = plev_rk.values*100
+    elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
+        plev = plev_rk.values*100
+    else:
+        raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
+    # compute weight for kernel files
+    plev_weight = np.empty_like(plev, dtype = np.float32)
+    if ((np.diff(plev) > 0).all()):
+#         print('plev increase')
+        plev_weight[-1] = (1.01e5-plev[-1])/1e4 +(plev[-1] - plev[-2])/2e4
+        plev_weight[0] = plev[0]/1e4 + (plev[1]-plev[0])/2e4
+        plev_weight[1:-1] = (plev[2:] - plev[:-2])/20000
+    elif ((np.diff(plev) < 0).all()):
+#         print('plev decrease')
+        plev_weight[0] = (1.01e5-plev[0])/1e4+(plev[0]- plev[1])/2e4
+        plev_weight[-1] = (plev[-2]-plev[-1])/2e4 + plev[-1]/1e4
+        plev_weight[1:-1] = (plev[:-2] - plev[2:])/2e4
+    else:
+        raise Exception("Error : plev is not monotonic")
+    return plev_weight
+    
+
 @njit(parallel=True)
 def alb_diff_pert_mon_cont_12mon_TLL_fast(pert_rsus,pert_rsds,cont_rsus,cont_rsds):
     """
@@ -188,7 +261,7 @@ def alb_diff_pert_mon_cont_12mon_TLL_fast(pert_rsus,pert_rsds,cont_rsus,cont_rsd
         alb_cont_mon = np.empty_like(cont_rsus[0,:,:],dtype = np.float32)
         alb_cont_mon = cont_rsus[mon,:,:] / cont_rsds[mon,:,:]
         alb_cont_mon = np.where((alb_cont_mon < 1) & (np.isfinite(alb_cont_mon)), alb_cont_mon , 1 )
-        for i in numba.prange(pert_rsus.shape[0]/12):
+        for i in numba.prange(int(pert_rsus.shape[0]/12)):
             alb_pert_mon = np.empty_like(cont_rsus[0,:,:],dtype = np.float32)
             alb_pert_mon = pert_rsus[i*12+mon,:,:] / pert_rsds[i*12+mon,:,:]
             alb_pert_mon = np.where((alb_pert_mon < 1) & (np.isfinite(alb_pert_mon)), alb_pert_mon , 1)            
@@ -204,9 +277,9 @@ def diff_pert_mon_cont_12mon_TLL_fast(pert_TLL,cont_TLL):
     ALL inputs have to be numpy array
     """
     diff = np.empty_like(pert_TLL,dtype = np.float32)
-    for mon in numba.prange(cont_TLL.shape[0]):
-        for i in numba.prange(pert_TLL.shape[0]/12):
-            diff[i*12+mon,:,:] = pert_TLL[i*12+mon,:,:] - cont_TLL[mon,:,:]
+    for i in numba.prange(pert_TLL.shape[0]):
+        mon = i%12
+        diff[i,:,:] = pert_TLL[i,:,:] - cont_TLL[mon,:,:]
     return diff
 
 @njit(parallel=True)
@@ -217,11 +290,10 @@ def diff_pert_mon_cont_12mon_TPLL_fast(pert_TPLL,cont_TPLL):
     ALL inputs have to be numpy array
     """
     diff = np.empty_like(pert_TPLL,dtype = np.float32)
-    for mon in numba.prange(cont_TPLL.shape[0]):
-        for i in numba.prange(pert_TPLL.shape[0]/12):
-            diff[i*12+mon,:,:,:] = pert_TPLL[i*12+mon,:,:,:] - cont_TPLL[mon,:,:,:]
+    for i in numba.prange(pert_TPLL.shape[0]):
+        mon = i%12
+        diff[i,:,:,:] = pert_TPLL[i,:,:,:] - cont_TPLL[mon,:,:,:]
     return diff
-
 
 # @njit(parallel=True)
 # def omega_wv_fast2(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
@@ -248,14 +320,13 @@ def omega_wv_fast(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
     For 3D variable [Time, Plev, Lat, Lon] (TPLL)
     ALL inputs have to be numpy array
     """
-    omega_wv = np.empty_like(hus_pert_TPLL,dtype = np.float32)
-    for mon in numba.prange(ta_cont_TPLL.shape[0]):
-        for pi in numba.prange(ta_cont_TPLL.shape[1]):
-            dT_dlnq_mon = _dT_dlnqs_fast(ta_cont_TPLL[mon,pi,:,:])
-            for i in range(int(hus_pert_TPLL.shape[0]/12)):
-                omega_wv[i*12+mon,pi,:,:] =  dT_dlnq_mon \
-                                              *(np.log(hus_pert_TPLL[i*12+mon,pi,:,:])\
-                                               -np.log(hus_cont_TPLL[mon,pi,:,:]))
+    omega_wv = np.zeros_like(hus_pert_TPLL,dtype = np.float32)
+    dT_dlnq_12mon = _dT_dlnqs_fast(ta_cont_TPLL)
+    for i in prange(hus_pert_TPLL.shape[0]):
+        mon = i%12
+        pert = hus_pert_TPLL[i,:,:,:]
+        cont = hus_cont_TPLL[mon,:,:,:]
+        omega_wv[i,:,:,:] =  dT_dlnq_12mon[mon,:,:,:]*np.log(pert/cont)
     return omega_wv
 
 @njit
@@ -274,9 +345,9 @@ def RK_compute_TLL_fast(var_mon, rk_mon_cli):
     ALL inputs have to be numpy array
     """
     dR_TLL = np.empty_like(var_mon,dtype = np.float32)
-    for mon in numba.prange(rk_mon_cli.shape[0]):
-        for i in numba.prange(var_mon.shape[0]/12):
-            dR_TLL[i*12+mon,:,:] = rk_mon_cli[mon,:,:] * var_mon[i*12+mon,:,:]
+    for i in prange(var_mon.shape[0]):
+        mon = i%12
+        dR_TLL[i,:,:] = rk_mon_cli[mon,:,:] * var_mon[i,:,:]
     return dR_TLL
 
 @njit(parallel=True)
@@ -286,96 +357,16 @@ def RK_compute_TPLL_plev_fast(var_mon, rk_mon_cli, plev_weight):
     For 3D variable [Time, Plev, Lat, Lon] (TPLL)
     ALL inputs have to be numpy array
     """
-#     CMIP6 standart pressure level
-#     plev_weight = [0.425, 0.75 , 1.125, 1.25 , 1., 1. , 1.,
-#                    0.75 , 0.5  ,0.5  , 0.5  , 0.4  , 0.25 ,
-#                    0.2  , 0.15 , 0.1  , 0.075, 0.045,0.005]
-
     dR_TLL = np.zeros_like(var_mon[:,0,:,:],dtype = np.float32)  
-    for mon in numba.prange(rk_mon_cli.shape[0]):
-        for i in numba.prange(var_mon.shape[0]/12):
-            for pi in range(var_mon.shape[1]):
-                for li in range(var_mon.shape[2]):
-                    for lj in range(var_mon.shape[3]):
-                        # skip NaN values (empty location due to topography)
-                        if np.isnan(rk_mon_cli[mon,pi,li,lj]) or np.isnan(var_mon[i*12+mon,pi,li,lj]): 
-                            continue
-                        dR_TLL[i*12+mon,li,lj] += rk_mon_cli[mon,pi,li,lj] \
-                                                 * var_mon[i*12+mon,pi,li,lj] \
-                                                 * plev_weight[pi]
+    for i in prange(var_mon.shape[0]):
+        mon = i%12
+        for pi in prange(var_mon.shape[1]):
+            for li in range(var_mon.shape[2]):
+                for lj in range(var_mon.shape[3]):
+                    # skip NaN values (empty location due to topography)
+                    if np.isnan(rk_mon_cli[mon,pi,li,lj]) or np.isnan(var_mon[i,pi,li,lj]): 
+                        continue
+                    dR_TLL[i,li,lj] += rk_mon_cli[mon,pi,li,lj] \
+                                          * var_mon[i,pi,li,lj] \
+                                          * plev_weight[pi]
     return dR_TLL
-
-def RK_plev_weight(plev_rk):
-    """
-    Create plev weight
-    assume the surface pressure is 1.01e3 hPa 
-    """
-    # units check for plev in kernel file
-    try:
-        plev_rk.attrs['units'] 
-    except:
-        raise Exception("Error: please check plev or its units")
-        
-    if plev_rk.attrs['units'] in ['mb','millibars','hPa','hpa',]:
-        plev = plev_rk.values*100
-    elif plev_rk.coords['plev'].attrs['units'] in ['pa', 'Pa']:
-        plev = plev_rk
-    else:
-        raise Exception("Error: please check units of pressure level: plev. Not in ['Pa','mb','millibars','hPa','hpa',]")
-    # compute weight for kernel files
-    plev_weight = np.empty_like(plev, dtype = np.float32)
-    if ((np.diff(plev) > 0).all()):
-#         print('plev increase')
-        plev_weight[-1] = (1.01e5-plev[-1])/1e4 +(plev[-1] - plev[-2])/2e4
-        plev_weight[0] = plev[0]/1e4 + (plev[1]-plev[0])/2e4
-        plev_weight[1:-1] = (plev[2:] - plev[:-2])/20000
-    elif ((np.diff(plev) < 0).all()):
-#         print('plev decrease')
-        plev_weight[0] = (1.01e5-plev[0])/1e4+(plev[0]- plev[1])/2e4
-        plev_weight[-1] = (plev[-2]-plev[-1])/2e4 + plev[-1]/1e4
-        plev_weight[1:-1] = (plev[:-2] - plev[2:])/2e4
-    else:
-        raise Exception("Error : plev is not monotonic")
-    return plev_weight
-    
-##  functions with xarray 
-def _dT_dlnqs(T):
-    # use CC-equation to derive dT/dln(q_s) 
-    dTdlnqs = np.empty_like(T,dtype = np.float32)
-    dTdlnqs = (T-29.65)**2/4302.64
-    return dTdlnqs
-
-
-def omega_wv_xarray(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
-    """
-    ALL inputs have to be xarray 
-    """
-
-    dT_dlnq_mon = _dT_dlnqs(ta_cont_TPLL)
-    omega_wv =  dT_dlnq_mon *(np.log(hus_pert_TPLL).groupby('time.month')\
-                             -np.log(hus_cont_TPLL)).groupby('time.month')
-    return omega_wv
-
-
-def RK_compute_suf(var, rk):
-    dR = var.groupby('time.month') *rk
-    return dR
-
-def RK_compute_TPLL(var, rk):
-    tmp = var.groupby('time.month')*rk
-    
-    # weighted by pressure and sum
-#     var = ta_anom
-#     plev_weight = var.plev.copy().values
-#     plev_weight[0] = (1.01e5 - var.plev[1])/20000
-#     plev_weight[-1] = (var.plev[-1].values-0)/20000
-#     plev_weight[1:-1] = (var.plev[:-2].values - var.plev[2:].values)/20000
-
-    # only correct for cmip6 data
-    plev_weight = [0.425, 0.75 , 1.125, 1.25 , 1., 1. , 1., \
-                   0.75 , 0.5  ,0.5  , 0.5  , 0.4  , 0.25 ,\
-                   0.2  , 0.15 , 0.1  , 0.075, 0.045,0.005]
-    plev_weight = xr.DataArray(plev_weight,var.plev.coords,dims=['plev'])
-    dR = tmp *plev_weight
-    dR = dR.sum(dim='plev',skipna=True)
-    return dR

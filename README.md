@@ -12,21 +12,24 @@ where ${dts_{gm}}$ is the global mean surface temp. change.
 
 The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/blob/main/R3k_example.ipynb)) shows how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is availabel at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file. The regridded data can be downloaded from [google drive](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing) or [princeton.edu compressed file](https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar).
 
-## r3k_env.yml
-The python environment file to run the example.
-Everything is common (`xarray` to load/create netcdf data, `numpy`, `matplotlib` to show results) except `Numba`.
+# Install
+1. Use r3k_env.yml to create enviroment. 
+2. Download Radiative_Repsonse_with_Raditive_kernel.py
+3. run example notebook (require exmaple data above).
+
+Everything is common (`xarray` to load/create `netcdf` data, `numpy`, `matplotlib` to show results) except `Numba`.
 
 [`Numba`](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset or many dataset/model/experiments). 
 
->For jobs that are not time sensitive, you should be able to use numpy or xarray version of functions without any config on environments. 
+>For jobs that are __not time sensitive__, you should be able to use __numpy or xarray version__ of functions without Numba. 
 
 A version of functions that use only numpy/xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
 
->The time for 150 years 2x2.5 [latxlon] data (\~4GB) is ~ 10 seconds on princeton jupyterhub (expect similar time for CPUs>4).
+>The time for 150 years 2x2.5 [latxlon] data (\~4GB) is ~ 10 seconds on princeton jupyterhub (expect similar time for CPUs>=4).
 >
->Using numpy only takes ~ 30 seconds (single CPU).
+>Numpy version takes ~ 30 seconds (single CPU).
 >
->Using Xarray only takes 1\~2 mins (single CPU).
+>Xarray version takes 1\~2 mins (single CPU).
 
 # Usage
 
@@ -46,7 +49,7 @@ A version of functions that use only numpy/xarray and is easier to understand is
 >
 >`dR_tacs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial ta}\Delta ta    $
 >
->`dR_lr     ` : $\frac{\partial R_{all-sky\ lw}}{\partial lr}\Delta lr ,\qquad lw\ R_{toa}$ change due to `lapse rate(lt)` change (vertial structure differs from dts)
+>`dR_lr     ` : $\frac{\partial R_{all-sky\ lw}}{\partial lr}\Delta lr ,\qquad lw\ R_{toa}$ change due to `lapse rate(lr)` change (vertial structure differs from dts)
 >
 >`dR_lrcs   ` : $\frac{\partial R_{clr-sky\ lw}}{\partial lr}\Delta lr    $
 >

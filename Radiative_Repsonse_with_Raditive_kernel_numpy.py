@@ -25,7 +25,7 @@ def global_mean_xarray(ds_XXLL):
     tmp_XX  = tmp_XXL.mean(dim=['lat'])
     return tmp_XX
 
-def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
+def decompose_dR_rk_toa_core_numpy(var_pert, var_cont,f_RK ):
 
     check_dimensions(var_pert, var_cont,f_RK)
     ta_anom = diff_pert_mon_cont_12mon_TPLL_fast(var_pert['ta'].values,var_cont['ta'].values)
@@ -156,7 +156,7 @@ def check_dimensions(var_pert, var_cont,f_RK):
         # checking time/month axis
         if var_pert[var].time.size%12!=0:
             print('Warning: data files are not nx12 month. Results could be wrong due to mismatch between kernal month and data month')
-        if var_cont[var].month.size[0]!=12:
+        if var_cont[var].month.size!=12:
             raise Exception('Error: control data files are not 12 month climatology')
             # check pressure level values
         if not np.all(var_pert[var].plev.values == f_RK.plev.values):

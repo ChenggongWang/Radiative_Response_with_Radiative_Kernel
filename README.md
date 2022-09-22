@@ -61,25 +61,25 @@ A version of functions that use only numpy/xarray and is easier to understand is
 >
 >`dR_albcs  ` : $\frac{\partial R_{clr-sky\ sw}}{\partial albedo}\Delta albedo$
 >
->`dR_cloud_lw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}\Delta cloud ,\qquad lw\ R_{toa}$ change due to `cloud` change (compute as residue)
+>`dR_cloud_lw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}\Delta cloud ,\qquad lw\ R_{toa}$ change due to `cloud` change (computed as residual)
 >
->`dR_cloud_sw   ` : $\frac{\partial R_{all-sky\ sw}}{\partial cloud}\Delta cloud$
+>`Dcs_lw    ` : $dF_{clr-sky\ lw}$ estimated `clear-sky lw forcing`
 >
->`Dcs_lw    ` : $      dF_{clr-sky\ lw}                          $, estimated `clear-sky lw forcing`
+>`Dcs_sw    ` : $dF_{clr-sky\ sw}$ estimated `clear-sky sw forcing`
 >
->`Dcs_sw    ` : $      dF_{clr-sky\ sw}                          $, estimated `clear-sky sw forcing`
+>`dR_sw     ` : $dR_{all-sky\ sw}$ all-sky TOA sw net flux change
 >
->`dR_sw     ` : $      dR_{all-sky\ sw}                          $, all-sky TOA sw net flux change
+>`dR_lw     ` : $dR_{all-sky\ lw}$ all-sky TOA lw net flux change
 >
->`dR_lw     ` : $      dR_{all-sky\ lw}                          $, all-sky TOA lw net flux change
+>`dRcs_sw   ` : $dR_{clr-sky\ sw}$ clear-sky TOA sw net flux change
 >
->`dRcs_sw   ` : $      dR_{clr-sky\ sw}                          $, clear-sky TOA sw net flux change
+>`dRcs_lw   ` : $dR_{clr-sky\ lw}$ clear-sky TOA lw net flux change
 >
->`dRcs_lw   ` : $      dR_{clr-sky\ lw}                          $, clear-sky TOA lw net flux change
+>`ts        ` : $ts$ surface temperature 
 >
->`ts        ` : $      ts                                        $, surface temperature 
->
->`dts       ` : $      dts                                       $, 'surface temperature change'
+>`dts       ` : $dts$ 'surface temperature change'
+
+
 >
 
 # To do plan

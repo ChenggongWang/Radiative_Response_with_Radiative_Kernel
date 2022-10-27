@@ -35,7 +35,7 @@ A version of functions that use only numpy/xarray and is easier to understand is
 
 > `decompose_dR_rk_toa_core(var_pert, var_cont,f_RK )` is the core function to call 
 > 
-> it will return a xarray dataset than contains variable as following (also its global-mean, append `_gm` in the variabel name):
+> it will return a xarray dataset that contains variable as following (also its global-mean, append `_gm` in the variabel name):
 
 >`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv}\Delta wv ,\qquad lw\ R_{toa}$ change due to `water vapor(wv)` change
 >

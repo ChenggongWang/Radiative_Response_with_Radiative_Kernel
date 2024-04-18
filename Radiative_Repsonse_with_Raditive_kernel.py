@@ -27,13 +27,13 @@ def global_mean_xarray(ds_XXLL):
     tmp_XX  = tmp_XXL.mean(dim=['lat'])
     return tmp_XX
 
-def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
-
+def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK, forced=True):
     check_dimensions(var_pert, var_cont,f_RK)
     ta_anom = diff_pert_mon_cont_12mon_TPLL_fast(var_pert['ta'].values,var_cont['ta'].values)
     omega_wv = omega_wv_fast(var_pert['hus'].values,\
                              var_cont['hus'].values,\
                              var_cont['ta'].values)
+    
     ts_anom = diff_pert_mon_cont_12mon_TLL_fast(var_pert['ts'].values, \
                                                 var_cont['ts'].values)
     ta_anom_lr = ta_anom - np.broadcast_to(ts_anom[:,np.newaxis,:,:],ta_anom.shape)
@@ -51,37 +51,74 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
                                                 (-var_cont['rlutcs'].values) )
     plev_weight = RK_plev_weight(f_RK.plev)
     
-    dR_wv_lw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.lw_q.values     , plev_weight)
-    dR_wv_sw    = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.sw_q.values     , plev_weight)
-    dR_wvcs_lw  = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.lwclr_q.values  , plev_weight)
-    dR_wvcs_sw  = RK_compute_TPLL_plev_fast(omega_wv    ,f_RK.swclr_q.values  , plev_weight)
+    dR_wv_rh_lw   = RK_compute_TPLL_plev_fast(ta_anom, f_RK.lw_q.values   , plev_weight)
+    dR_wv_rh_sw   = RK_compute_TPLL_plev_fast(ta_anom, f_RK.sw_q.values   , plev_weight)
+    dR_wvcs_rh_lw = RK_compute_TPLL_plev_fast(ta_anom, f_RK.lwclr_q.values, plev_weight)
+    dR_wvcs_rh_sw = RK_compute_TPLL_plev_fast(ta_anom, f_RK.swclr_q.values, plev_weight)
     
-    dR_Ta       = RK_compute_TPLL_plev_fast(ta_anom     ,f_RK.lw_ta.values    , plev_weight)
-    dR_Tacs     = RK_compute_TPLL_plev_fast(ta_anom     ,f_RK.lwclr_ta.values , plev_weight)
+    dR_wv_lw    = RK_compute_TPLL_plev_fast(omega_wv, f_RK.lw_q.values   , plev_weight)
+    dR_wv_sw    = RK_compute_TPLL_plev_fast(omega_wv, f_RK.sw_q.values   , plev_weight)
+    dR_wvcs_lw  = RK_compute_TPLL_plev_fast(omega_wv, f_RK.lwclr_q.values, plev_weight)
+    dR_wvcs_sw  = RK_compute_TPLL_plev_fast(omega_wv, f_RK.swclr_q.values, plev_weight)
     
-    dR_LR       = RK_compute_TPLL_plev_fast(ta_anom_lr  ,f_RK.lw_ta.values    , plev_weight)
-    dR_LRcs     = RK_compute_TPLL_plev_fast(ta_anom_lr  ,f_RK.lwclr_ta.values , plev_weight)
+    dR_Ta       = RK_compute_TPLL_plev_fast(ta_anom, f_RK.lw_ta.values   , plev_weight)
+    dR_Tacs     = RK_compute_TPLL_plev_fast(ta_anom, f_RK.lwclr_ta.values, plev_weight)
     
-    dR_Ts       = RK_compute_TLL_fast       (ts_anom     ,f_RK.lw_ts.values     )
-    dR_Tscs     = RK_compute_TLL_fast       (ts_anom     ,f_RK.lwclr_ts.values  )
-    dR_alb      = RK_compute_TLL_fast       (alb_anom_100,f_RK.sw_alb.values    )
-    dR_albcs    = RK_compute_TLL_fast       (alb_anom_100,f_RK.swclr_alb.values )
+    dR_LR       = RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.lw_ta.values   , plev_weight)
+    dR_LRcs     = RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.lwclr_ta.values, plev_weight)
+    
+    #rh
+    dR_Ta_rh_lw    = dR_Ta   + dR_wv_rh_lw   
+    dR_Ta_rh_sw    = 0.      + dR_wv_rh_sw   
+    dR_Tacs_rh_lw  = dR_Tacs + dR_wvcs_rh_lw 
+    dR_Tacs_rh_sw  = 0.      + dR_wvcs_rh_sw 
+    dR_LR_rh_lw    = dR_LR   + RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.lw_q.values   , plev_weight)
+    dR_LR_rh_sw    = 0.      + RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.sw_q.values   , plev_weight)
+    dR_LRcs_rh_lw  = dR_LRcs + RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.lwclr_q.values, plev_weight)
+    dR_LRcs_rh_sw  = 0.      + RK_compute_TPLL_plev_fast(ta_anom_lr, f_RK.swclr_q.values, plev_weight)
+    
+    dR_Ts       = RK_compute_TLL_fast(ts_anom     , f_RK.lw_ts.values     )
+    dR_Tscs     = RK_compute_TLL_fast(ts_anom     , f_RK.lwclr_ts.values  )
+    dR_alb      = RK_compute_TLL_fast(alb_anom_100, f_RK.sw_alb.values    )
+    dR_albcs    = RK_compute_TLL_fast(alb_anom_100, f_RK.swclr_alb.values )
 
     ## dR due to cloud change
     Dcs_lw   = dRcs_lw - dR_Tacs - dR_Tscs - dR_wvcs_lw
     Dcs_sw   = dRcs_sw - dR_albcs - dR_wvcs_sw
-    D_lw     = Dcs_lw / 1.16
-    D_sw     = Dcs_sw / 1.16
+    if forced == True:
+        # estimate all-sky forcing using clear-sky forcing
+        D_lw     = Dcs_lw / 1.16  # magic number
+        D_sw     = Dcs_sw / 1.16  # magic number
+    else:
+        # set forcing to zero for non-forced experiment
+        D_lw     = np.zeros_like(Dcs_lw)
+        D_sw     = np.zeros_like(Dcs_sw)
+        
     dR_c_lw  = dR_lw - D_lw - dR_Ta - dR_Ts - dR_wv_lw
     dR_c_sw  = dR_sw - D_sw - dR_alb - dR_wv_sw
     
     ## write to file
     ds_write = xr.Dataset()
     
-    ds_write.coords['time'] = (('time'),var_pert['ts'].coords['time'].values)
-    ds_write.coords['lat']  = (('lat'),var_pert['ts'].coords['lat'].values)
-    ds_write.coords['lon']  = (('lon'),var_pert['ts'].coords['lon'].values)
+    ds_write.coords['time']   = (('time'),var_pert['ts'].coords['time'].values)
+    ds_write.coords['lat']    = (('lat'),var_pert['ts'].coords['lat'].values)
+    ds_write.coords['lon']    = (('lon'),var_pert['ts'].coords['lon'].values)
     
+    # rh results
+    ds_write['dR_rh_lw']      = (('time','lat','lon'),dR_wv_lw - dR_wv_rh_lw)
+    ds_write['dR_rh_sw']      = (('time','lat','lon'),dR_wv_sw - dR_wv_rh_sw)
+    ds_write['dR_rhcs_lw']    = (('time','lat','lon'),dR_wvcs_lw - dR_wvcs_rh_lw)
+    ds_write['dR_rhcs_sw']    = (('time','lat','lon'),dR_wvcs_sw - dR_wvcs_rh_sw)
+    ds_write['dR_Ta_rh_lw']   = (('time','lat','lon'),dR_Ta_rh_lw  )
+    ds_write['dR_Ta_rh_sw']   = (('time','lat','lon'),dR_Ta_rh_sw  )
+    ds_write['dR_Tacs_rh_lw'] = (('time','lat','lon'),dR_Tacs_rh_lw)
+    ds_write['dR_Tacs_rh_sw'] = (('time','lat','lon'),dR_Tacs_rh_sw)
+    ds_write['dR_LR_rh_lw']   = (('time','lat','lon'),dR_LR_rh_lw  )
+    ds_write['dR_LR_rh_sw']   = (('time','lat','lon'),dR_LR_rh_sw  )
+    ds_write['dR_LRcs_rh_lw'] = (('time','lat','lon'),dR_LRcs_rh_lw)
+    ds_write['dR_LRcs_rh_sw'] = (('time','lat','lon'),dR_LRcs_rh_sw)
+    
+    # conventional
     ds_write['dR_wv_lw']   = (('time','lat','lon'),dR_wv_lw)
     ds_write['dR_wv_sw']   = (('time','lat','lon'),dR_wv_sw)
     ds_write['dR_wvcs_lw'] = (('time','lat','lon'),dR_wvcs_lw)
@@ -94,8 +131,8 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['dR_tscs']    = (('time','lat','lon'),dR_Tscs)
     ds_write['dR_alb']     = (('time','lat','lon'),dR_alb)
     ds_write['dR_albcs']   = (('time','lat','lon'),dR_albcs)
-    ds_write['dR_cloud_lw']    = (('time','lat','lon'),dR_c_lw)
-    ds_write['dR_cloud_sw']    = (('time','lat','lon'),dR_c_sw)
+    ds_write['dR_cloud_lw']= (('time','lat','lon'),dR_c_lw)
+    ds_write['dR_cloud_sw']= (('time','lat','lon'),dR_c_sw)
     ds_write['Dcs_lw']     = (('time','lat','lon'),Dcs_lw)
     ds_write['Dcs_sw']     = (('time','lat','lon'),Dcs_sw)
     ds_write['dR_sw']      = (('time','lat','lon'),dR_sw)
@@ -104,6 +141,22 @@ def decompose_dR_rk_toa_core(var_pert, var_cont,f_RK ):
     ds_write['dRcs_lw']    = (('time','lat','lon'),dRcs_lw)
     ds_write['ts']         = (('time','lat','lon'),var_pert['ts'].values)
     ds_write['dts']        = (('time','lat','lon'),ts_anom)
+    
+    #rh
+    
+    # rh results
+    ds_write['dR_rh_lw_gm']      = (('time'),global_mean_xarray(ds_write.dR_rh_lw      ).values.astype('float32'))
+    ds_write['dR_rh_sw_gm']      = (('time'),global_mean_xarray(ds_write.dR_rh_sw      ).values.astype('float32'))
+    ds_write['dR_rhcs_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_rhcs_lw    ).values.astype('float32'))
+    ds_write['dR_rhcs_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_rhcs_sw    ).values.astype('float32'))
+    ds_write['dR_Ta_rh_lw_gm']   = (('time'),global_mean_xarray(ds_write.dR_Ta_rh_lw   ).values.astype('float32'))
+    ds_write['dR_Ta_rh_sw_gm']   = (('time'),global_mean_xarray(ds_write.dR_Ta_rh_sw   ).values.astype('float32'))
+    ds_write['dR_Tacs_rh_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_Tacs_rh_lw ).values.astype('float32'))
+    ds_write['dR_Tacs_rh_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_Tacs_rh_sw ).values.astype('float32'))
+    ds_write['dR_LR_rh_lw_gm']   = (('time'),global_mean_xarray(ds_write.dR_LR_rh_lw   ).values.astype('float32'))
+    ds_write['dR_LR_rh_sw_gm']   = (('time'),global_mean_xarray(ds_write.dR_LR_rh_sw   ).values.astype('float32'))
+    ds_write['dR_LRcs_rh_lw_gm'] = (('time'),global_mean_xarray(ds_write.dR_LRcs_rh_lw ).values.astype('float32'))
+    ds_write['dR_LRcs_rh_sw_gm'] = (('time'),global_mean_xarray(ds_write.dR_LRcs_rh_sw ).values.astype('float32'))
     
     ds_write['dR_wv_lw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_lw    ).values.astype('float32'))
     ds_write['dR_wv_sw_gm']    = (('time'),global_mean_xarray(ds_write.dR_wv_sw    ).values.astype('float32'))
@@ -329,6 +382,23 @@ def omega_wv_fast(hus_pert_TPLL,hus_cont_TPLL,ta_cont_TPLL):
         omega_wv[i,:,:,:] =  dT_dlnq_12mon[mon,:,:,:]*np.log(pert/cont)
     return omega_wv
 
+@njit(parallel=True)
+def omega_wv_fix_rh(hus_pert_TPLL,hus_cont_TPLL,ta_pert_TPLL,ta_cont_TPLL):
+    """
+    Convert humidity to omega (the variable used by water vapor kernel)
+    For 3D variable [Time, Plev, Lat, Lon] (TPLL)
+    ALL inputs have to be numpy array
+    """
+    omega_wv = np.zeros_like(hus_pert_TPLL,dtype = np.float32)
+    hus_pert_TPLL_fix_rh = _q_fix_rh(ta_cont_TPLL,hus_cont_TPLL,ta_pert_TPLL)
+    dT_dlnq_12mon = _dT_dlnqs_fast(ta_cont_TPLL)
+    for i in prange(hus_pert_TPLL.shape[0]):
+        mon = i%12
+        pert = hus_pert_TPLL_fix_rh[i,:,:,:]
+        cont = hus_cont_TPLL[mon,:,:,:]
+        omega_wv[i,:,:,:] =  dT_dlnq_12mon[mon,:,:,:]*np.log(pert/cont)
+    return omega_wv
+
 @njit
 def _dT_dlnqs_fast(T):
     # use CC-equation to derive dT/dln(q_s) 
@@ -336,6 +406,22 @@ def _dT_dlnqs_fast(T):
     dTdlnqs = (T-29.65)**2/4302.64
     return dTdlnqs
 
+@njit
+def _cc_eq(T):
+    # T: Kelvin
+    # August–Roche–Magnus formula (approximation)
+    # qs = 6.1094*exp(17.625*(T-273.15)/(T-30.11)) (qs: hpa)
+    return 6.1094*np.exp(17.625*(T-273.15)/(T-30.11))
+
+@njit
+def _q_fix_rh(T_cont,q_cont,T_pert):
+    q_fix_rh = np.zeros_like(T_pert,dtype = np.float32)
+    qs_cont = _cc_eq(T_cont)
+    rh = q_cont/qs_cont
+    for i in prange(T_pert.shape[0]):
+        mon = i%12
+        q_fix_rh[i,:,:,:] = rh[mon,:,:,:]*_cc_eq(T_pert[i,:,:,:])
+    return q_fix_rh
 
 @njit(parallel=True)
 def RK_compute_TLL_fast(var_mon, rk_mon_cli):

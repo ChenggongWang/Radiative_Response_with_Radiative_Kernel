@@ -1,6 +1,6 @@
 # Radiative_Response_with_Radiative_Kernel
 
-Use the radiative kernel ([Soden et al. 2008](https://doi.org/10.1175/2007JCLI2110.1)) to diagnose the TOA raditive response $dR_i$  due to change in  climate variables i: temperature (ta and ts), water vapor (wv), albedo and cloud. 
+Use the radiative kernel ([Soden et al. 2008](https://doi.org/10.1175/2007JCLI2110.1)) to diagnose the TOA radiative response $dR_i$  due to change in  climate variables i: temperature (ta and ts), water vapor (wv), albedo and cloud. 
 
 Then we can compute the climate feedbacks: 
 
@@ -8,34 +8,40 @@ $$\lambda_i = \frac{dR_i}{dts_{gm}}$$
 
 where ${dts_{gm}}$ is the global mean surface temp. change.
 
+# Usage
+### Create the Python environment.
+use `r3k_env.yml` file
+```
+conda env create -f r3k_env.yml
+conda activate r3k_env
+python -m ipykernel install --user --name r3k_env --display-name "r3k_env" # Register the kernel for jupyter
+```
+or 
+```
+conda create -y -n r3k_env python=3.10
+conda activate r3k_env
+conda install  -y  -c conda-forge numpy numba scikit-learn matplotlib
+conda install  -y  -c conda-forge xarray netCDF4 ipykernel 
+python -m ipykernel install --user --name r3k_env --display-name "r3k_env" # Register the kernel for jupyter
+```
+
+### Download the kernel file and the example data (4G)
+```
+wget https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar
+wget https://raw.githubusercontent.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/main/Radiative_Repsonse_with_Raditive_kernel.py -O Radiative_Repsonse_with_Raditive_kernel.py
+```
+### run example notebook (requires the example data below).
+
 # Example 
 
-The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/blob/main/R3k_example.ipynb)) shows how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is availabel at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file. The regridded data can be downloaded from [google drive](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing) or [princeton.edu compressed file](https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar).
+The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/blob/main/R3k_example.ipynb)) shows how to compute the climate feedback of GFDL-CM4 model (using the abrupt-4xCO2 and piControl experiments). The raw data is available at [CMIP6](https://pcmdi.llnl.gov/CMIP6/) data nodes [LLNL](https://esgf-node.llnl.gov/projects/cmip6/). But we have to regrid the original data to the same resolution as the kernel file (or the other way around). The regridded data can be downloaded from [google drive](https://drive.google.com/drive/folders/1E66izDrjdOVWYl2nJj32cXSNJPegGQ8q?usp=sharing) or [princeton.edu compressed file](https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar).
 
-# Install
-1. Use r3k_env.yml to create enviroment. 
-2. Download Radiative_Repsonse_with_Raditive_kernel.py
-3. run example notebook (require exmaple data above).
 
-Everything is common (`xarray` to load/create `netcdf` data, `numpy`, `matplotlib` to show results) except `Numba`.
-
-[`Numba`](https://numba.pydata.org/) is the core package and used to parallel/accelerate the computation (recommand for large dataset or many dataset/model/experiments). 
-
->For jobs that are __not time sensitive__, you should be able to use __numpy or xarray version__ of functions without Numba. 
-
-A version of functions that use only numpy/xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
-
->The time for 150 years 2x2.5 [latxlon] data (\~4GB) is ~ 10 seconds on princeton jupyterhub (expect similar time for CPUs>=4).
->
->Numpy version takes ~ 30 seconds (single CPU).
->
->Xarray version takes 1\~2 mins (single CPU).
-
-# Usage
+# Decription
 
 > `decompose_dR_rk_toa_core(var_pert, var_cont,f_RK )` is the core function to call 
 > 
-> it will return a xarray dataset that contains variable as following (also its global-mean, append `_gm` in the variabel name):
+> it will return a xarray dataset that contains variables as follows (also its global-mean, append `_gm` in the variable name):
 
 >`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv}\Delta wv ,\qquad lw\ R_{toa}$ change due to `water vapor(wv)` change
 >
@@ -81,6 +87,20 @@ A version of functions that use only numpy/xarray and is easier to understand is
 
 
 >
+# Note
 
+Everything is common (`xarray` to load/create `netcdf` data, `numpy`, `matplotlib` to show results) except `Numba`.
+
+[`Numba`](https://numba.pydata.org/) is the core package and is used to parallel/accelerate the computation (recommended for large datasets or many datasets/experiments). 
+
+>For jobs that are __not time sensitive__, you should be able to use __numpy or xarray version__ of functions without Numba. 
+
+A version of functions that use only numpy/xarray and is easier to understand is also provided for understanding and modification (see the benchmark code).
+
+>The time for 150 years 2x2.5 [latxlon] data (\~4GB) is ~ 10 seconds on princeton jupyterhub (expect similar time for CPUs>=4).
+>
+>Numpy version takes ~ 30 seconds (single CPU).
+>
+>Xarray version takes 1\~2 mins (single CPU).
 # To do plan
 Add results based on RH to account for compensation between WV and LR

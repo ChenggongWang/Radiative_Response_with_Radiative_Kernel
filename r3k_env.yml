@@ -8,3 +8,5 @@ dependencies:
   - numba
   - matplotlib
   - netCDF4
+  - scipy
+  - ipykernel

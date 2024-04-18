@@ -38,7 +38,7 @@ The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radia
 
 
 # Decription
-`decompose_dR_rk_toa_core(var_pert, var_cont,f_RK, forced=True)` is the core function to call 
+`decompose_dR_rk_toa_core(var_pert, var_cont,f_RK, forced=True)` is the core function to call. The option `forced=True` will estimate the all-sky forcing using clear-sky forcing. Set `forced=False` for experiments without TOA radiative forcing (e.g. fixed SST experiment).
 It will return a xarray dataset that contains variables as follows (also its global-mean, variable name with `_gm`):
 
 >`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv}\Delta wv ,\qquad lw\ R_{toa}$ change due to `water vapor(wv)` change

@@ -30,7 +30,7 @@ python -m ipykernel install --user --name r3k_env --display-name "r3k_env" # Reg
 wget https://tigress-web.princeton.edu/~cw55/share_data/r3k_example_data.tar
 wget https://raw.githubusercontent.com/ChenggongWang/Radiative_Response_with_Radiative_Kernel/main/Radiative_Repsonse_with_Raditive_kernel.py -O Radiative_Repsonse_with_Raditive_kernel.py
 ```
-### run example notebook (requires the example data below).
+### Run example notebook (requires the example data below).
 
 # Example 
 
@@ -38,10 +38,8 @@ The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radia
 
 
 # Decription
-
-> `decompose_dR_rk_toa_core(var_pert, var_cont,f_RK )` is the core function to call 
-> 
-> it will return a xarray dataset that contains variables as follows (also its global-mean, append `_gm` in the variable name):
+`decompose_dR_rk_toa_core(var_pert, var_cont,f_RK, forced=True)` is the core function to call 
+It will return a xarray dataset that contains variables as follows (also its global-mean, variable name with `_gm`):
 
 >`dR_wv_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial wv}\Delta wv ,\qquad lw\ R_{toa}$ change due to `water vapor(wv)` change
 >
@@ -85,8 +83,23 @@ The example notebook ([r3k_example.ipynb](https://github.com/ChenggongWang/Radia
 >
 >`dts       ` : $dts$ 'surface temperature change'
 
-
+Decomposition base on RH:
+>`dR_rh_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial rh}\Delta rh ,\qquad lw\ R_{toa}$ change due to `relative humidity(rh)` change
 >
+>`dR_rh_sw  ` : $\frac{\partial R_{all-sky\ sw}}{\partial rh}\Delta rh    $
+>
+>`dR_rhcs_lw` : $\frac{\partial R_{clr-sky\ lw}}{\partial rh}\Delta rh    $
+>
+>`dR_rhcs_sw` : $\frac{\partial R_{clr-sky\ sw}}{\partial rh}\Delta rh    $
+>
+>`dR_Ta_rh_lw  ` : $\frac{\partial R_{all-sky\ lw}}{\partial ta}\mid_{RH} \Delta ta ,\qquad lw\ R_{toa}$ change due to `air temp.(ta)` change (including lapse rate change) when `relative humidity(rh)` is fixed
+>
+>`dR_Ta_rh_sw  ` : $\frac{\partial R_{all-sky\ sw}}{\partial ta}\mid_{RH} \Delta ta    $
+>
+>`dR_Tacs_rh_lw` : $\frac{\partial R_{clr-sky\ lw}}{\partial ta}\mid_{RH} \Delta ta    $
+>
+>`dR_Tacs_rh_sw` : $\frac{\partial R_{clr-sky\ sw}}{\partial ta}\mid_{RH} \Delta ta    $
+
 # Note
 
 Everything is common (`xarray` to load/create `netcdf` data, `numpy`, `matplotlib` to show results) except `Numba`.
@@ -102,5 +115,6 @@ A version of functions that use only numpy/xarray and is easier to understand is
 >Numpy version takes ~ 30 seconds (single CPU).
 >
 >Xarray version takes 1\~2 mins (single CPU).
+
 # To do plan
-Add results based on RH to account for compensation between WV and LR
+Add regrid option for convenience
